@@ -1,6 +1,10 @@
 import { Shield, Menu, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 function Navbar({ isMenuOpen, setIsMenuOpen }) {
+
+    const Navigate = useNavigate();
+
   return (
     <nav className="fixed w-full z-50 bg-[#0A0A0A] border-b border-[#2E2E2E]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,7 +35,7 @@ function Navbar({ isMenuOpen, setIsMenuOpen }) {
               >
                 Applications
               </a>
-              <button className="bg-[#E50914] hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-all">
+              <button className="bg-[#E50914] hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-all" onClick={()=>Navigate('/signin')}>
                 Get Started
               </button>
             </div>
