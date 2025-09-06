@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import signinImage from '../assets/signup.jpg';
 import Navbar from "../components/Navbar";
+import axios from "axios";
+import { register } from "../utils/firebase";
+import { useNavigate } from "react-router-dom";
 
 const SignupPage = () => {
   const [email, setEmail] = useState("");
@@ -12,8 +15,9 @@ const SignupPage = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     if (!email || !firstName || !lastName || !password || !confirmPassword) {
       setError("Please fill in all fields.");
@@ -23,9 +27,15 @@ const SignupPage = () => {
       setError("Password and Confirm Password must match.");
       return;
     }
+
+    const registerUser = await register(email, password);
+
     setError("");
     alert("Signed up!");
+    navigate("/signin");
   };
+
+  
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-2">
