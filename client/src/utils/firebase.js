@@ -1,21 +1,83 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { GoogleAuthProvider, createUserWithEmailAndPassword, getAuth, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyCpnuKm2c3d2HwLuFct_a9i3tii_WSlLjw",
+  apiKey: import.meta.env.VITE_FIREBASE_APIKEY,
   authDomain: "inboxguard-2b71a.firebaseapp.com",
   projectId: "inboxguard-2b71a",
-  storageBucket: "inboxguard-2b71a.firebasestorage.app",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: "349315151933",
-  appId: "1:349315151933:web:b55c84b7f1de82007f1254",
+  appId: import.meta.env.VITE_FIREBASE_APPID,
   measurementId: "G-QZJ1NBGDYB",
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+
+const provider = new GoogleAuthProvider();
+
+const auth = getAuth();
+
+export const googleAuth = async () => {
+  try {
+    console.log("Google Authentication.....");
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    return {
+      accessToken: user.accessToken,
+      displayName: user.displayName,
+      email: user.email,
+      photoURL: user.photoURL,
+    };
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
+
+export const register = async(email, password) =>{
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    console.log(userCredential);
+    const user = userCredential.user;
+    await sendEmailVerification(user);
+    alert("Email sent for verifiction!!")
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
+export const login = async(email, password)=>{
+  try {
+    
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    
+    const user = userCredential.user;
+    console.log(user);
+    if(!user.emailVerified){
+      throw new Error("Email not verified. Please verify your email before logging in.");
+    }
+    return {
+      accessToken: user.accessToken,
+      displayName: user.displayName,
+      email: user.email,
+      photoURL: user.photoURL,
+    };
+
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
+export const resetPassword = async(email) =>{
+  try {
+    const emailSent = await sendPasswordResetEmail(auth, email);
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}

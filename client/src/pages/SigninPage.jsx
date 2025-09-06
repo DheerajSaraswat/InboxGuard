@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import signinImage from '../assets/signup.jpg';
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { googleAuth, login } from "../utils/firebase";
+import axios from "axios";
 
 const GoogleIcon = () => (
    <svg
@@ -64,15 +66,38 @@ const SigninPage = () => {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     if (!email || !password) {
       setError("Please enter both email and password.");
       return;
     }
+
+    const user = await login(email, password);
+    console.log(user);
+
+    
+
     setError("");
     alert("Signed in!");
   };
+
+  const handleGoogleAuth = async(e)=>{
+    e.preventDefault();
+
+    try {
+      const user = await googleAuth();
+
+      const response = await axios.post(import.meta.env.VITE_SERVER_DOMAIN + "/google-auth",{
+        accessToken: user.accessToken,
+      })
+
+      //After setting up Backend
+
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-2">
@@ -135,7 +160,7 @@ const SigninPage = () => {
               <label className="flex items-center text-[#BBBBBB] text-sm">
                 <input type="checkbox" className="mr-2 accent-[#E50914]" /> Remember me
               </label>
-              <a href="#" className="text-[#E50914] text-sm hover:underline">Forgot your password?</a>
+              <Link to="/reset-password" className="text-[#E50914] text-sm hover:underline">Forgot your password?</Link>
             </div>
             <button
               type="submit"
@@ -153,7 +178,7 @@ const SigninPage = () => {
             <button
               type="button"
               className="w-full flex items-center justify-center gap-3 bg-[#111111] border border-[#2E2E2E] hover:border-[#E50914] text-white py-3 rounded-lg font-semibold text-lg transition-all mb-2"
-              onClick={() => alert('Google login coming soon!')}
+              onClick={handleGoogleAuth}
             >
               <GoogleIcon />
               Sign in with Google
