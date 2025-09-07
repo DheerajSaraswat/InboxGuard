@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { resetPassword } from "../utils/firebase";
+import { resetPassword } from "../../common/firebase";
 
 function ForgotPasswordPage() {
 

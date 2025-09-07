@@ -1,10 +1,10 @@
 import { createContext, useEffect, useState } from "react";
 import HomePage from "./pages/HomePage";
-import SigninPage from "./pages/SigninPage";
-import SignupPage from "./pages/SignupPage";
+import SigninPage from "./pages/Authentication/SigninPage";
+import SignupPage from "./pages/Authentication/SignupPage";
 import { Routes, Route } from "react-router-dom";
 import { lookInSession } from "./common/session";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ForgotPasswordPage from "./pages/Authentication/ForgotPasswordPage";
 
 export const UserContext = createContext({});
 export const ThemeContext = createContext({});
