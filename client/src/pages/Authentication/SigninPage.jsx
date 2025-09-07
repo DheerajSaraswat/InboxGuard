@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import signinImage from '../assets/signup.jpg';
+import signinImage from "../../assets/signin.jpg";
 import { Link, useNavigate } from "react-router-dom";
-import { googleAuth, login } from "../utils/firebase";
+import { googleAuth, login } from "../../common/firebase";
 import axios from "axios";
+import toast, {Toaster} from "react-hot-toast";
 
 const GoogleIcon = () => (
    <svg
@@ -58,72 +59,74 @@ const EyeIcon = ({ visible, size = 24, color = "#b2b0b0ff" }) => (
 );
 
 const SigninPage = () => {
-  
-    const Navigate = useNavigate();
+  const Navigate = useNavigate();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
-  const handleSubmit = async(e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
-      setError("Please enter both email and password.");
+      toast.error("Please enter both email and password.");
       return;
     }
 
-    const user = await login(email, password);
-    console.log(user);
-
-    
-
-    setError("");
-    alert("Signed in!");
+    try {
+      const user = await login(email, password, rememberMe);
+      console.log(user);
+      toast.success("Signed in successfully!");
+      Navigate("/dashboard"); // Example navigation after login
+    } catch (err) {
+      toast.error("Failed to sign in.");
+    }
   };
 
-  const handleGoogleAuth = async(e)=>{
+  const handleGoogleAuth = async (e) => {
     e.preventDefault();
 
     try {
-      const user = await googleAuth();
-
-      const response = await axios.post(import.meta.env.VITE_SERVER_DOMAIN + "/google-auth",{
-        accessToken: user.accessToken,
-      })
-
-      //After setting up Backend
-
+      const user = await googleAuth(rememberMe);
+      console.log(user);
+      toast.success("Signed in with Google successfully!");
+      Navigate("/dashboard"); // Example navigation after Google login
     } catch (error) {
-      console.log(error);
+      toast.error("Google sign-in failed.");
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-2">
+      <Toaster />
       <div className="w-full max-w-5xl flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden border border-[#2E2E2E] bg-[#1A1A1A]">
-
         {/* Left column: Features */}
-            <div className="hidden md:flex items-center justify-center bg-gradient-to-br from-[#0A0A0A] via-[#1A1A1A] to-[#111111] w-1/2 relative">
-              {!imageLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#181818]">
-                  <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#E50914]" />
-                </div>
-              )}
-              <img
-                src={signinImage}
-                alt="Signin Page"
-                className={`object-cover w-full h-full transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                onLoad={() => setImageLoaded(true)}
-              />
+        <div className="hidden md:flex items-center justify-center bg-gradient-to-br from-[#0A0A0A] via-[#1A1A1A] to-[#111111] w-1/2 relative">
+          {!imageLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[#181818]">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#E50914]" />
+            </div>
+          )}
+          <img
+            src={signinImage}
+            alt="Signin Page"
+            className={`object-cover w-full h-full transition-opacity duration-500 ${
+              imageLoaded ? "opacity-100" : "opacity-0"
+            }`}
+            onLoad={() => setImageLoaded(true)}
+          />
         </div>
 
         {/* Right column: Sign-in form */}
         <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-12">
-          <h2 className="text-3xl font-bold text-white mb-6 text-center">Sign In</h2>
+          <h2 className="text-3xl font-bold text-white mb-6 text-center">
+            Sign In
+          </h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-[#BBBBBB] mb-2" htmlFor="email">Email</label>
+              <label className="block text-[#BBBBBB] mb-2" htmlFor="email">
+                Email
+              </label>
               <input
                 type="email"
                 id="email"
@@ -135,7 +138,9 @@ const SigninPage = () => {
               />
             </div>
             <div className="relative ">
-              <label className="block text-[#BBBBBB] mb-2" htmlFor="password">Password</label>
+              <label className="block text-[#BBBBBB] mb-2" htmlFor="password">
+                Password
+              </label>
               <input
                 type={showPassword ? "text" : "password"}
                 id="password"
@@ -155,16 +160,23 @@ const SigninPage = () => {
                 <EyeIcon visible={showPassword} />
               </button>
             </div>
-            {error && <div className="text-[#E50914] text-sm text-center">{error}</div>}
             <div className="flex items-center justify-between">
-              <label className="flex items-center text-[#BBBBBB] text-sm">
-                <input type="checkbox" className="mr-2 accent-[#E50914]" /> Remember me
+              <label className="flex items-center text-[#BBBBBB]">
+                <input
+                  type="checkbox"
+                  className="mr-2"
+                  checked={rememberMe}
+                  onChange={() => setRememberMe(!rememberMe)}
+                />
+                Remember Me
               </label>
-              <Link to="/reset-password" className="text-[#E50914] text-sm hover:underline">Forgot your password?</Link>
+              <Link to="/reset-password" className="text-[#E50914]">
+                Forgot Password?
+              </Link>
             </div>
             <button
               type="submit"
-              className="w-full bg-[#E50914] hover:bg-red-800 text-white py-3 rounded-lg font-semibold text-lg transition-all"
+              className="w-full bg-[#E50914] text-white py-3 rounded-lg hover:bg-[#f6121d] transition"
             >
               Sign In
             </button>
@@ -186,7 +198,12 @@ const SigninPage = () => {
           </div>
           <div className="mt-2 text-center">
             <span className="text-[#BBBBBB]">Don't have an account?</span>
-            <button onClick={()=>Navigate('/signup')} className="text-[#E50914] ml-2 hover:underline">Sign Up</button>
+            <button
+              onClick={() => Navigate("/signup")}
+              className="text-[#E50914] ml-2 hover:underline"
+            >
+              Sign Up
+            </button>
           </div>
         </div>
       </div>
