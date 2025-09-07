@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import signinImage from "../../assets/signin.jpg";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { googleAuth, login } from "../../common/firebase";
-import axios from "axios";
-import toast, {Toaster} from "react-hot-toast";
+// import {axios} from "axios";
+import { toast , Toaster} from "react-hot-toast";
 
 const GoogleIcon = () => (
    <svg
@@ -119,6 +121,14 @@ const SigninPage = () => {
 
         {/* Right column: Sign-in form */}
         <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-12">
+          <Link
+            to="/"
+            className="mb-4 flex items-center text-[#E50914] hover:underline w-fit"
+            aria-label="Go back to homepage"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            <span>Back to Home</span>
+          </Link>
           <h2 className="text-3xl font-bold text-white mb-6 text-center">
             Sign In
           </h2>
@@ -200,7 +210,7 @@ const SigninPage = () => {
             <span className="text-[#BBBBBB]">Don't have an account?</span>
             <button
               onClick={() => Navigate("/signup")}
-              className="text-[#E50914] ml-2 hover:underline"
+              className="text-[#E50914] ml-2 hover:underline cursor-pointer"
             >
               Sign Up
             </button>
