@@ -1,7 +1,7 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import signinImage from "../../assets/signup.jpg";
-import Navbar from "../../components/Navbar";
-import axios from "axios";
 import { register } from "../../common/firebase";
 import { useNavigate } from "react-router-dom";
 import toast,{ Toaster } from "react-hot-toast";
@@ -67,11 +67,19 @@ const SignupPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-2">
+    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-2 py-10">
       <Toaster />
       <div className="w-full max-w-5xl flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden border border-[#2E2E2E] bg-[#1A1A1A]">
         {/* Left column: Signup form */}
         <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-12">
+          <Link
+            to="/"
+            className="mb-4 flex items-center text-[#E50914] hover:underline w-fit"
+            aria-label="Go back to homepage"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            <span>Back to Home</span>
+          </Link>
           <h2 className="text-3xl font-bold text-white mb-6 text-center">
             Sign Up
           </h2>

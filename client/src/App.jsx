@@ -5,6 +5,7 @@ import SignupPage from "./pages/Authentication/SignupPage";
 import { Routes, Route } from "react-router-dom";
 import { lookInSession } from "./common/session";
 import ForgotPasswordPage from "./pages/Authentication/ForgotPasswordPage";
+import Dashboard from "./pages/dashboard";
 
 export const UserContext = createContext({});
 export const ThemeContext = createContext({});
@@ -36,7 +37,9 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/signin" element={<SigninPage />} />
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/reset-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element=
+          {<ForgotPasswordPage />} />
+          <Route path="/dashboard" element={<Dashboard/>}/>
         </Routes>
       </UserContext.Provider>
     </ThemeContext.Provider>
