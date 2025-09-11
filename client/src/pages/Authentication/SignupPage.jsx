@@ -1,51 +1,93 @@
 import React, { useState } from "react";
-import signinImage from '../assets/signup.jpg';
-import Navbar from "../components/Navbar";
-import axios from "axios";
-import { register } from "../utils/firebase";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import signinImage from "../../assets/signup.jpg";
+import { register } from "../../common/firebase";
 import { useNavigate } from "react-router-dom";
+import toast,{ Toaster } from "react-hot-toast";
+
+const EyeIcon = ({ visible, size = 24, color = "#b2b0b0ff" }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="feather feather-eye"
+  >
+    {visible ? (
+      <>
+        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+        <circle cx="12" cy="12" r="3" />
+        <line x1="1" y1="1" x2="23" y2="23" />
+      </>
+    ) : (
+      <>
+        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    )}
+  </svg>
+);
 
 const SignupPage = () => {
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async(e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !firstName || !lastName || !password || !confirmPassword) {
-      setError("Please fill in all fields.");
+      toast.error("Please fill in all fields.");
       return;
     }
+    
     if (password !== confirmPassword) {
-      setError("Password and Confirm Password must match.");
+      toast.error("Password and Confirm Password must match.");
       return;
     }
 
-    const registerUser = await register(email, password);
-
-    setError("");
-    alert("Signed up!");
-    navigate("/signin");
+    try {
+      await register(email, password);
+      toast.success("Signed up successfully!");
+      navigate("/signin");
+    } catch (error) {
+      toast.error("Failed to sign up. Please try again.");
+    }
   };
 
-  
-
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-2">
+    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-2 py-10">
+      <Toaster />
       <div className="w-full max-w-5xl flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden border border-[#2E2E2E] bg-[#1A1A1A]">
         {/* Left column: Signup form */}
         <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-12">
-          <h2 className="text-3xl font-bold text-white mb-6 text-center">Sign Up</h2>
+          <Link
+            to="/"
+            className="mb-4 flex items-center text-[#E50914] hover:underline w-fit"
+            aria-label="Go back to homepage"
+          >
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            <span>Back to Home</span>
+          </Link>
+          <h2 className="text-3xl font-bold text-white mb-6 text-center">
+            Sign Up
+          </h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-[#BBBBBB] mb-2" htmlFor="email">Work Email</label>
+              <label className="block text-[#BBBBBB] mb-2" htmlFor="email">
+                Work Email
+              </label>
               <input
                 type="email"
                 id="email"
@@ -58,7 +100,12 @@ const SignupPage = () => {
             </div>
             <div className="flex gap-4">
               <div className="w-1/2">
-                <label className="block text-[#BBBBBB] mb-2" htmlFor="firstName">First Name</label>
+                <label
+                  className="block text-[#BBBBBB] mb-2"
+                  htmlFor="firstName"
+                >
+                  First Name
+                </label>
                 <input
                   type="text"
                   id="firstName"
@@ -70,7 +117,9 @@ const SignupPage = () => {
                 />
               </div>
               <div className="w-1/2">
-                <label className="block text-[#BBBBBB] mb-2" htmlFor="lastName">Last Name</label>
+                <label className="block text-[#BBBBBB] mb-2" htmlFor="lastName">
+                  Last Name
+                </label>
                 <input
                   type="text"
                   id="lastName"
@@ -83,7 +132,9 @@ const SignupPage = () => {
               </div>
             </div>
             <div className="relative">
-              <label className="block text-[#BBBBBB] mb-2" htmlFor="password">Password</label>
+              <label className="block text-[#BBBBBB] mb-2" htmlFor="password">
+                Password
+              </label>
               <input
                 type={showPassword ? "text" : "password"}
                 id="password"
@@ -100,24 +151,16 @@ const SignupPage = () => {
                 onClick={() => setShowPassword((prev) => !prev)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                <svg width="24" height="24" fill="none" stroke="#BBBBBB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {showPassword ? (
-                    <>
-                      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-                      <circle cx="12" cy="12" r="3" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </>
-                  ) : (
-                    <>
-                      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </>
-                  )}
-                </svg>
+                <EyeIcon visible={showPassword} />
               </button>
             </div>
             <div className="relative">
-              <label className="block text-[#BBBBBB] mb-2" htmlFor="confirmPassword">Confirm Password</label>
+              <label
+                className="block text-[#BBBBBB] mb-2"
+                htmlFor="confirmPassword"
+              >
+                Confirm Password
+              </label>
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 id="confirmPassword"
@@ -132,25 +175,13 @@ const SignupPage = () => {
                 className="absolute top-10 right-4 p-1 focus:outline-none"
                 tabIndex={-1}
                 onClick={() => setShowConfirmPassword((prev) => !prev)}
-                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                aria-label={
+                  showConfirmPassword ? "Hide password" : "Show password"
+                }
               >
-                <svg width="24" height="24" fill="none" stroke="#BBBBBB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {showConfirmPassword ? (
-                    <>
-                      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-                      <circle cx="12" cy="12" r="3" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </>
-                  ) : (
-                    <>
-                      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </>
-                  )}
-                </svg>
+                <EyeIcon visible={showConfirmPassword} />
               </button>
             </div>
-            {error && <div className="text-[#E50914] text-sm text-center">{error}</div>}
             <button
               type="submit"
               className="w-full bg-[#E50914] hover:bg-red-700 text-white py-3 rounded-lg font-semibold text-lg transition-all"
@@ -159,10 +190,21 @@ const SignupPage = () => {
             </button>
           </form>
           <div className="mt-6 text-center text-[#BBBBBB] text-xs">
-            By signing up, you agree to our <a href="#" className="text-[#E50914] hover:underline">Terms of Use</a> and <a href="#" className="text-[#E50914] hover:underline">Privacy Policy</a>.
+            By signing up, you agree to our{" "}
+            <a href="#" className="text-[#E50914] hover:underline">
+              Terms of Use
+            </a>{" "}
+            and{" "}
+            <a href="#" className="text-[#E50914] hover:underline">
+              Privacy Policy
+            </a>
+            .
           </div>
           <div className="mt-2 text-center">
-            <span className="text-[#BBBBBB]">Already have an account?</span> <a href="/signin" className="text-[#E50914] ml-1 hover:underline">Sign In</a>
+            <span className="text-[#BBBBBB]">Already have an account?</span>{" "}
+            <a href="/signin" className="text-[#E50914] ml-1 hover:underline">
+              Sign In
+            </a>
           </div>
         </div>
         {/* Right column: Image area */}
@@ -175,7 +217,9 @@ const SignupPage = () => {
           <img
             src={signinImage}
             alt="Signup Visual"
-            className={`object-cover object-center h-full rounded-r-xl shadow-lg transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`object-cover object-center h-full rounded-r-xl shadow-lg transition-opacity duration-500 ${
+              imageLoaded ? "opacity-100" : "opacity-0"
+            }`}
             onLoad={() => setImageLoaded(true)}
           />
         </div>
