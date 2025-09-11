@@ -14,7 +14,7 @@ import {Archive,Bell,ChevronDown,
 
 import logo from "../assets/LightThemeLogo.png"
 
-export default function InboxGuard() {
+export default function Dashboard() {
   return (
   <div className="flex h-screen bg-[#fafbfc] font-sans" style={{fontFamily: 'Segoe UI, Arial, sans-serif'}}>
       {/* Sidebar */}

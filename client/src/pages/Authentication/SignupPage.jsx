@@ -71,7 +71,7 @@ const SignupPage = () => {
       <Toaster />
       <div className="w-full max-w-5xl flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden border border-[#2E2E2E] bg-[#1A1A1A]">
         {/* Left column: Signup form */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-12">
+        <div className="w-full md:w-1/2 flex flex-col justify-center p-8">
           <Link
             to="/"
             className="mb-4 flex items-center text-[#E50914] hover:underline w-fit"
