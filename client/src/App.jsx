@@ -5,7 +5,7 @@ import SignupPage from "./pages/Authentication/SignupPage";
 import { Routes, Route } from "react-router-dom";
 import { lookInSession } from "./common/session";
 import ForgotPasswordPage from "./pages/Authentication/ForgotPasswordPage";
-import Dashboard from "./pages/dashboard";
+import Dashboard from "./pages/Dashboard";
 
 export const UserContext = createContext({});
 export const ThemeContext = createContext({});
