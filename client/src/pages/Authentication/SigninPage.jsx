@@ -4,11 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import signinImage from "../../assets/signin.jpg";
 import { useNavigate } from "react-router-dom";
 import { googleAuth, login } from "../../common/firebase";
-// import {axios} from "axios";
 import { toast , Toaster} from "react-hot-toast";
-import { useContext } from "react";
-import { UserContext } from "../../App";
-import { registerUser } from "../../apiRequests/registerUser";
+import { registerUserWithGoogle } from "../../apiRequests/registerUserWithGoogle";
 
 const GoogleIcon = () => (
    <svg
@@ -80,10 +77,6 @@ const SigninPage = () => {
 
     try {
       const user = await login(email, password, rememberMe);
-      console.log(user);
-
-      const res = await registerUser(user);
-
       toast.success("Signed in successfully!");
       Navigate("/dashboard"); // Example navigation after login
     } catch (err) {
@@ -96,7 +89,9 @@ const SigninPage = () => {
 
     try {
       const user = await googleAuth(rememberMe);
-      console.log(user);
+      // console.log(user);
+      const res = await registerUserWithGoogle(user);
+      console.log(res);
       toast.success("Signed in with Google successfully!");
       Navigate("/dashboard"); // Example navigation after Google login
     } catch (error) {
