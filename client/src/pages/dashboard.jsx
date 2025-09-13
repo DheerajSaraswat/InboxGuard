@@ -15,6 +15,8 @@ import {Archive,Bell,ChevronDown,
 import logo from "../assets/LightThemeLogo.png"
 
 export default function Dashboard() {
+
+  
   return (
   <div className="flex h-screen bg-[#fafbfc] font-sans" style={{fontFamily: 'Segoe UI, Arial, sans-serif'}}>
       {/* Sidebar */}
@@ -120,6 +122,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-    </div>
+  </div>
   );
 }
