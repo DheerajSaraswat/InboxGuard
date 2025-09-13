@@ -102,6 +102,7 @@ export const login = async (email, password, rememberMe) => {
       displayName: user.displayName,
       email: user.email,
       photoURL: user.photoURL,
+      uid: user.uid,
     };
   } catch (error) {
     // console.log(error);

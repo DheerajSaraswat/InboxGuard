@@ -6,6 +6,7 @@ import { Routes, Route } from "react-router-dom";
 import { lookInSession } from "./common/session";
 import ForgotPasswordPage from "./pages/Authentication/ForgotPasswordPage";
 import Dashboard from "./pages/Dashboard";
+import { AuthProvider } from "./context/AuthContext.jsx";
 
 export const UserContext = createContext({});
 export const ThemeContext = createContext({});
@@ -17,11 +18,7 @@ function App() {
   const [userAuth, setUserAuth] = useState("");
   const [theme, setTheme] = useState(() => (darkTheme() ? "dark" : "light"));
   useEffect(() => {
-    const userInSession = lookInSession("user");
     const themeInSession = lookInSession("theme");
-    userInSession
-      ? setUserAuth(JSON.parse(userInSession))
-      : setUserAuth({ access_token: null });
     themeInSession
       ? setTheme(() => {
           document.body.setAttribute("data-theme", themeInSession);
@@ -32,7 +29,7 @@ function App() {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
-      <UserContext.Provider value={{ userAuth, setUserAuth }}>
+      <AuthProvider>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/signin" element={<SigninPage />} />
@@ -41,7 +38,7 @@ function App() {
           {<ForgotPasswordPage />} />
           <Route path="/dashboard" element={<Dashboard/>}/>
         </Routes>
-      </UserContext.Provider>
+      </AuthProvider>
     </ThemeContext.Provider>
   );
 }
