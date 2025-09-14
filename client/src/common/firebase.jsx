@@ -51,6 +51,7 @@ export const googleAuth = async (rememberMe) => {
       displayName: user.displayName,
       email: user.email,
       photoURL: user.photoURL,
+      uid: user.uid,
     };
   } catch (error) {
     // console.error("Google Auth error:", error);
@@ -67,8 +68,16 @@ export const register = async (email, password) => {
     );
     console.log(userCredential);
     const user = userCredential.user;
+    const token = await getIdToken(user, true);
     await sendEmailVerification(user);
     toast.success("Verification email sent!");
+    return {
+      accessToken: token,
+      displayName: user.displayName,
+      email: user.email,
+      photoURL: user.photoURL,
+      uid: user.uid,
+    };
   } catch (error) {
     console.log(error);
     toast.error(error.message || "Registration failed.");
