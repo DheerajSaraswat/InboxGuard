@@ -5,6 +5,7 @@ import signinImage from "../../assets/signup.jpg";
 import { register } from "../../common/firebase";
 import { useNavigate } from "react-router-dom";
 import toast,{ Toaster } from "react-hot-toast";
+import { registerUser } from "../../apiRequests/registerUser";
 
 const EyeIcon = ({ visible, size = 24, color = "#b2b0b0ff" }) => (
   <svg
@@ -58,7 +59,9 @@ const SignupPage = () => {
     }
 
     try {
-      await register(email, password);
+      const user = await register(email, password);
+      const res = await registerUser(user);
+      console.log(user);
       toast.success("Signed up successfully!");
       navigate("/signin");
     } catch (error) {
