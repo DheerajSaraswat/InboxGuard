@@ -129,3 +129,14 @@ export const resetPassword = async (email) => {
     throw error;
   }
 };
+
+export const logout = async () => {
+  try {
+    await auth.signOut();
+    toast.success("Logged out successfully!");
+  } catch (error) {
+    console.log(error);
+    toast.error(error.message || "Logout failed.");
+    throw error;
+  }
+};
