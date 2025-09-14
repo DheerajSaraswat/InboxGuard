@@ -13,9 +13,11 @@ import {Archive,Bell,ChevronDown,
 } from "lucide-react"
 
 import logo from "../assets/LightThemeLogo.png"
+import { useAuth } from "../context/AuthContext";
 
 export default function Dashboard() {
 
+  const {user} = useAuth();
   
   return (
   <div className="flex h-screen bg-[#fafbfc] font-sans" style={{fontFamily: 'Segoe UI, Arial, sans-serif'}}>
