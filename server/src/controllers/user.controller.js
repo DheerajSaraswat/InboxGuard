@@ -12,10 +12,10 @@ const userRegister = asyncHandler(async (req, res) => {
   }
 
   // Check if user already exists
-  const existingUser = await User.findOne({ firebaseUid: uid });
-  if (existingUser) {
-    throw new ApiError(400, "User already exists");
-  }
+  // const existingUser = await User.findOne({ firebaseUid: uid });
+  // if (existingUser) {
+  //   throw new ApiError(400, "User already exists");
+  // }
 
   // 🔥 Fetch latest user record from Firebase Auth
   const firebaseUser = await admin.auth().getUser(uid);
