@@ -103,8 +103,9 @@ export const login = async (email, password, rememberMe) => {
         "Email not verified. Please verify your email before logging in."
       );
     }
-
+    
     const token = await getIdToken(user, true);
+
     toast.success("Login successful!");
     return {
       accessToken: token,
