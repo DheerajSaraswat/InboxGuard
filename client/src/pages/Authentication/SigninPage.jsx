@@ -6,6 +6,9 @@ import { useNavigate } from "react-router-dom";
 import { googleAuth, login } from "../../common/firebase";
 import { toast , Toaster} from "react-hot-toast";
 import { registerUserWithGoogle } from "../../apiRequests/registerUserWithGoogle";
+import { loginUser } from "../../apiRequests/loginUser";
+import { useDispatch } from "react-redux";
+import { sliceLogin } from "../../redux/slices/authSlice";
 
 const GoogleIcon = () => (
    <svg
@@ -61,12 +64,14 @@ const EyeIcon = ({ visible, size = 24, color = "#b2b0b0ff" }) => (
 );
 
 const SigninPage = () => {
-  const Navigate = useNavigate();
+  const navigate = useNavigate();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+
+  const dispatch = useDispatch();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,10 +81,14 @@ const SigninPage = () => {
     }
 
     try {
-      const user = await login(email, password, rememberMe);
+      const {accessToken} = await login(email, password, rememberMe);
+      const res = await loginUser(email,password)
+      console.log(accessToken);
+      dispatch(sliceLogin({user:res.data.data, token:accessToken}))
       toast.success("Signed in successfully!");
-      Navigate("/dashboard"); // Example navigation after login
+      navigate("/dashboard"); // Example navigation after login
     } catch (err) {
+      console.log(err);
       toast.error("Failed to sign in.");
     }
   };
@@ -210,7 +219,7 @@ const SigninPage = () => {
           <div className="mt-2 text-center">
             <span className="text-[#BBBBBB]">Don't have an account?</span>
             <button
-              onClick={() => Navigate("/signup")}
+              onClick={() => navigate("/signup")}
               className="text-[#E50914] ml-2 hover:underline cursor-pointer"
             >
               Sign Up

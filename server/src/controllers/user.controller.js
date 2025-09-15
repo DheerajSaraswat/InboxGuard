@@ -86,4 +86,19 @@ const userRegisterWithGoogle = asyncHandler(async(req, res)=>{
   }
 })
 
-export {userRegister, userRegisterWithGoogle};
+const userLogin = asyncHandler(async(req, res)=>{
+  const {email, password} = req.body;
+  if(!email){
+    throw new ApiError(400, "Email is required")
+  }
+  if(!password){
+    throw new ApiError(400, "Password is required")
+  }
+  const user = await User.findOne({email})
+  if(!user){
+    throw new ApiError(404, "User not found. Please register first.")
+  }
+  return res.status(200).json(new ApiResponse(200, user, "User login successful."))
+})
+
+export {userRegister, userRegisterWithGoogle, userLogin};

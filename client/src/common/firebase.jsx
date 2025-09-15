@@ -52,6 +52,7 @@ export const googleAuth = async (rememberMe) => {
       email: user.email,
       photoURL: user.photoURL,
       uid: user.uid,
+      username:user.username
     };
   } catch (error) {
     // console.error("Google Auth error:", error);
@@ -77,6 +78,7 @@ export const register = async (email, password) => {
       email: user.email,
       photoURL: user.photoURL,
       uid: user.uid,
+      username: user.username,
     };
   } catch (error) {
     console.log(error);
@@ -91,6 +93,7 @@ export const login = async (email, password, rememberMe) => {
       ? browserLocalPersistence
       : browserSessionPersistence;
     await setPersistence(auth, persistence);
+    console.log(email ,"   ----   ", password);
     const userCredential = await signInWithEmailAndPassword(
       auth,
       email,
@@ -112,6 +115,7 @@ export const login = async (email, password, rememberMe) => {
       email: user.email,
       photoURL: user.photoURL,
       uid: user.uid,
+      username: user.username,
     };
   } catch (error) {
     // console.log(error);
