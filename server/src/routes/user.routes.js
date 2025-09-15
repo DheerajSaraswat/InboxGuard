@@ -4,11 +4,12 @@ import {
   userRegister,
   userRegisterWithGoogle,
 } from "../controllers/user.controller.js";
+import { verifyAuth } from "../middlewares/verifyAuth.js";
 
 const router = Router();
 
-router.route("/register").post(userRegister);
+router.route("/register").post(verifyAuth, userRegister);
 router.route("/register-google").post(userRegisterWithGoogle);
-router.route("/login").post(userLogin);
+router.route("/login").post(verifyAuth , userLogin);
 
 export default router;

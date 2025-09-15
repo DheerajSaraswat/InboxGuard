@@ -16,3 +16,6 @@ connect()
     });
   })
   .catch((err) => console.log(`MongoDB connection failer ${err}`));
+
+
+  import "./jobs/cleanupAccount.js";
