@@ -19,7 +19,7 @@ import {
   UserCircle,
 } from "lucide-react"
 
-import React from "react";
+import React, { useEffect } from "react";
 import logo from "../assets/LightThemeLogo.png"
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
@@ -54,7 +54,7 @@ export default function Dashboard() {
   }
 
   // Tailwind dark mode: add/remove 'dark' class on html element
-  React.useEffect(() => {
+  useEffect (() => {
     const root = document.documentElement;
     if (theme === 'dark') {
       root.classList.add('dark');

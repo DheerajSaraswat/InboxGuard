@@ -4,8 +4,9 @@ import { ArrowLeft } from "lucide-react";
 import signinImage from "../../assets/signin.jpg";
 import { useNavigate } from "react-router-dom";
 import { googleAuth, login } from "../../common/firebase";
-import { toast , Toaster} from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { registerUserWithGoogle } from "../../apiRequests/registerUserWithGoogle";
+import Loader from "../../common/Loader";
 
 const GoogleIcon = () => (
    <svg
@@ -62,11 +63,11 @@ const EyeIcon = ({ visible, size = 24, color = "#b2b0b0ff" }) => (
 
 const SigninPage = () => {
   const Navigate = useNavigate();
-  const [imageLoaded, setImageLoaded] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,11 +77,15 @@ const SigninPage = () => {
     }
 
     try {
+      setLoading(true);
       const user = await login(email, password, rememberMe);
+      console.log(user);
       toast.success("Signed in successfully!");
       Navigate("/dashboard"); // Example navigation after login
     } catch (err) {
       toast.error("Failed to sign in.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -88,35 +93,33 @@ const SigninPage = () => {
     e.preventDefault();
 
     try {
+      setLoading(true);
       const user = await googleAuth(rememberMe);
-      // console.log(user);
-      const res = await registerUserWithGoogle(user);
-      console.log(res);
+      console.log(user);
       toast.success("Signed in with Google successfully!");
       Navigate("/dashboard"); // Example navigation after Google login
     } catch (error) {
       toast.error("Google sign-in failed.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-2">
-      <Toaster />
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <Loader/>
+        </div>
+      )}
       <div className="w-full max-w-5xl flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden border border-[#2E2E2E] bg-[#1A1A1A]">
         {/* Left column: Features */}
         <div className="hidden md:flex items-center justify-center bg-gradient-to-br from-[#0A0A0A] via-[#1A1A1A] to-[#111111] w-1/2 relative">
-          {!imageLoaded && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#181818]">
-              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#E50914]" />
-            </div>
-          )}
+
           <img
             src={signinImage}
             alt="Signin Page"
-            className={`object-cover w-full h-full transition-opacity duration-500 ${
-              imageLoaded ? "opacity-100" : "opacity-0"
-            }`}
-            onLoad={() => setImageLoaded(true)}
+            className={`object-cover w-full h-full transition-opacity duration-500 `}
           />
         </div>
 
@@ -187,7 +190,7 @@ const SigninPage = () => {
             </div>
             <button
               type="submit"
-              className="w-full bg-[#E50914] text-white py-3 rounded-lg hover:bg-[#f6121d] transition"
+              className="w-full bg-[#E50914] text-white py-3 rounded-lg hover:bg-[#f6121d] transition cursor-pointer font-semibold text-lg"
             >
               Sign In
             </button>
