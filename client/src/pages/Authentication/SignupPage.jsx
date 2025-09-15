@@ -61,7 +61,7 @@ const SignupPage = () => {
     try {
       const user = await register(email, password);
       const res = await registerUser(user);
-      console.log(user);
+      // console.log(res);
       toast.success("Signed up successfully!");
       navigate("/signin");
     } catch (error) {
