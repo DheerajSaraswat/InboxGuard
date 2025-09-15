@@ -85,12 +85,10 @@ const SigninPage = () => {
     try {
       setLoading(true);
       const {accessToken} = await login(email, password, rememberMe);
-      const res = await loginUser(email,password)
-      console.log(accessToken);
+      const res = await loginUser()
       dispatch(sliceLogin({user:res.data.data, token:accessToken}))
-      // console.log(user);
       toast.success("Signed in successfully!");
-      navigate("/dashboard"); // Example navigation after login
+      navigate("/dashboard");
     } catch (err) {
       console.log(err);
       toast.error("Failed to sign in.");

@@ -67,7 +67,6 @@ export const register = async (email, password) => {
       email,
       password
     );
-    console.log(userCredential);
     const user = userCredential.user;
     const token = await getIdToken(user, true);
     await sendEmailVerification(user);
@@ -93,7 +92,6 @@ export const login = async (email, password, rememberMe) => {
       ? browserLocalPersistence
       : browserSessionPersistence;
     await setPersistence(auth, persistence);
-    console.log(email ,"   ----   ", password);
     const userCredential = await signInWithEmailAndPassword(
       auth,
       email,

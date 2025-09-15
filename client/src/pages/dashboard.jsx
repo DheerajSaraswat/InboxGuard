@@ -26,7 +26,8 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../common/firebase";
-import { useSelector } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
+import { sliceLogout } from "../redux/slices/authSlice";
 
 export default function Dashboard() {
   // State for selected email
@@ -37,15 +38,23 @@ export default function Dashboard() {
   const isDark = theme === 'dark';
   // const {user} = useAuth();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  // console.log(user);
   const { user } = useSelector((state) => state.auth);
+  // console.log(user);
+
+  useEffect(()=>{
+    if(!user){
+      navigate("/signin");
+    }
+  },[user, navigate])
 
   const handleLogOut = async(e) => {
       e.preventDefault();
     try{
       console.log("Logging out...");
       await logout();
+      dispatch(sliceLogout());
       toast.success("Logged out successfully");
       navigate("/signin");
       console.log("Logged out");
@@ -64,6 +73,8 @@ export default function Dashboard() {
       root.classList.remove('dark');
     }
   }, [theme]);
+
+  if(!user) return null;
   
   return (
   <div className={`flex min-h-screen transition-colors duration-300 ${isDark ? 'bg-[#18181b] text-[#f3f4f6]' : 'bg-[#fafbfc] text-[#111]'}`} style={{fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif'}}>
@@ -76,7 +87,7 @@ export default function Dashboard() {
           </button>
           <nav className="flex flex-col gap-3 text-[1rem]">
             <button className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${isDark ? 'bg-[#232326] text-[#f3f4f6]' : 'bg-gray-200 text-[#111]'} font-semibold`}>
-              <Inbox className="w-4 h-4" /> {user.username} <span className={`ml-auto ${isDark ? 'bg-[#18181b] text-[#f3f4f6]' : 'bg-[#e5e7eb] text-[#111]'} text-xs px-2 py-1 rounded-full`}></span>
+              <Inbox className="w-4 h-4" /> {user?.username} <span className={`ml-auto ${isDark ? 'bg-[#18181b] text-[#f3f4f6]' : 'bg-[#e5e7eb] text-[#111]'} text-xs px-2 py-1 rounded-full`}></span>
             </button>
             <button className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg hover:${isDark ? 'bg-[#232326]' : 'bg-[#f3f4f6]'} ${isDark ? 'text-[#f3f4f6]' : 'text-[#111]'} font-normal`}>
               <Star className="w-4 h-4" /> Starred
@@ -122,7 +133,7 @@ export default function Dashboard() {
                 {isDark ? <Sun className="w-6 h-6 text-yellow-400" /> : <Moon className="w-6 h-6 text-[#111]" />}
               </button>
               <div className={`relative flex items-center gap-1 px-3 py-2 rounded-lg ${isDark ? 'text-[#f3f4f6] bg-[#232326]' : 'text-[#111] '} cursor-pointer`} tabIndex={0} onClick={() => setShowDropdown(v => !v)} onBlur={() => setShowDropdown(false)}>
-                <img src={user.photoURL} className={`w-8 h-8 ${isDark ? 'text-[#f3f4f6] bg-[#232326]' : 'text-[#111] bg-[#e5e7eb]'} rounded-full p-1`} />
+                <img src={user?.displayImage} className={`w-8 h-8 ${isDark ? 'text-[#f3f4f6] bg-[#232326]' : 'text-[#111] bg-[#e5e7eb]'} rounded-full p-1`} />
                 <ChevronDown className={`w-4 h-4 stroke-[3] ${isDark ? 'text-[#f3f4f6]' : 'text-[#111]'}`} />
                 {showDropdown && (
                   <div className={`absolute right-0 top-full mt-2 w-56 ${isDark ? 'bg-[#232326] border-[#232326]' : 'bg-white border-[#e5e7eb]'} border rounded-2xl shadow-xl z-10 py-2 font-sans`}>

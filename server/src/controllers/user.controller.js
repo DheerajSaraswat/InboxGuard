@@ -5,26 +5,21 @@ import {User} from "../schema/user.schema.js"
 import admin from "../config/firebaseAdmin.js";
 
 const userRegister = asyncHandler(async (req, res) => {
-  const { uid, email, displayName, photoURL } = req.body;
-
+  const { uid, email, photoURL } = req.body;
+console.log(req.user);
   if (!uid || !email) {
     throw new ApiError(400, "UID and Email are required");
   }
 
-  // Check if user already exists
-  // const existingUser = await User.findOne({ firebaseUid: uid });
-  // if (existingUser) {
-  //   throw new ApiError(400, "User already exists");
-  // }
-
-  // 🔥 Fetch latest user record from Firebase Auth
+  // Fetch latest user record from Firebase Auth
   const firebaseUser = await admin.auth().getUser(uid);
 
   // Generate username (always unique, derived from UID)
   const username = `user_${uid.slice(-6)}`;
 
   // Fallback profile image
-  const defaultImage = `https://api.dicebear.com/7.x/identicon/svg?seed=${username}`;
+  const initial = email.charAt(0);
+  const defaultImage = `https://api.dicebear.com/9.x/initials/svg?seed=${initial}`;
 
   // Create new user in MongoDB
   const newUser = await User.create({
@@ -87,18 +82,25 @@ const userRegisterWithGoogle = asyncHandler(async(req, res)=>{
 })
 
 const userLogin = asyncHandler(async(req, res)=>{
-  const {email, password} = req.body;
-  if(!email){
-    throw new ApiError(400, "Email is required")
+  try {
+    const decoded = req.user; // set by verifyAuth middleware
+    // Sync emailVerified
+    if (decoded.email_verified) {
+      await User.updateOne(
+        { firebaseUid: decoded.uid },
+        { $set: { emailVerified: true } }
+      );
+    }
+    // Fetch latest Mongo user
+    const user = await User.findOne({ firebaseUid: decoded.uid });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ success: true, data: user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Login failed", error: err.message });
   }
-  if(!password){
-    throw new ApiError(400, "Password is required")
-  }
-  const user = await User.findOne({email})
-  if(!user){
-    throw new ApiError(404, "User not found. Please register first.")
-  }
-  return res.status(200).json(new ApiResponse(200, user, "User login successful."))
 })
 
 export {userRegister, userRegisterWithGoogle, userLogin};

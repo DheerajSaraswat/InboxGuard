@@ -62,7 +62,7 @@ const SignupPage = () => {
     try {
       setLoading(true);
       const user = await register(email, password);
-      const res = await registerUser(user);      
+      await registerUser(user);      
       toast.success("Signed up successfully!");
       navigate("/verify-email");
     } catch (error) {
