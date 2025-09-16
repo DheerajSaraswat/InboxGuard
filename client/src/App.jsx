@@ -6,12 +6,10 @@ import { Routes, Route } from "react-router-dom";
 import { lookInSession } from "./common/session";
 import ForgotPasswordPage from "./pages/Authentication/ForgotPasswordPage";
 import Dashboard from "./pages/dashboard";
-import { AuthProvider } from "./context/AuthContext.jsx";
 import AnimationWrapper from "./common/AnimationWrapper.jsx";
 import VerifyEmailPage from "./pages/Authentication/VerifyEmailPage.jsx";
 
 
-export const UserContext = createContext({});
 export const ThemeContext = createContext({});
 
 const darkTheme = () =>
@@ -36,7 +34,6 @@ function App() {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
-      <AuthProvider>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/signin" element={
@@ -57,7 +54,6 @@ function App() {
           } />
           <Route path="/dashboard" element={<Dashboard/>}/>
         </Routes>
-      </AuthProvider>
     </ThemeContext.Provider>
   );
 }
