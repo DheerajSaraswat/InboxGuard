@@ -1,0 +1,89 @@
+import mongoose from "mongoose";
+import { Schema } from "mongoose";
+
+const UserSchema = new Schema({
+  firebaseUid: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
+  username: { type: String, required: true },
+  displayImage: { type: String, default: null },
+
+  accountType: {
+    type: String,
+    enum: ["free", "professional", "enterprise"],
+    default: "free",
+  },
+  isActive: { type: Boolean, default: true },
+  emailVerified: { type: Boolean, default: false },
+  lastLogin: { type: Date },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+
+  securitySettings: {
+    phishingDetection: {
+      enabled: { type: Boolean, default: true },
+      sensitivity: {
+        type: String,
+        enum: ["low", "medium", "high"],
+        default: "medium",
+      },
+      customRules: [
+        {
+          ruleId: String,
+          name: String,
+          type: String, // keyword, url, sender, content
+          pattern: String,
+          action: String, // block, warn, allow
+          isActive: { type: Boolean, default: true },
+          createdAt: { type: Date, default: Date.now },
+        },
+      ],
+    },
+    encryption: {
+      publicKey: String,
+      keyGeneratedAt: Date,
+      algorithm: { type: String, default: "RSA-2048" },
+    },
+    blacklist: [
+      { type: { type: String }, value: String, addedAt: Date, reason: String },
+    ],
+    whitelist: [
+      { type: { type: String }, value: String, addedAt: Date, reason: String },
+    ],
+    notifications: {
+      phishingAlerts: { type: Boolean, default: true },
+      emailNotifications: { type: Boolean, default: true },
+      desktopNotifications: { type: Boolean, default: false },
+      fcmToken: String,
+    },
+  },
+
+  storage: {
+    used: { type: Number, default: 0 },
+    limit: { type: Number, default: 1 * 1024 * 1024 * 1024 }, // 1 GB free plan
+    lastCalculated: { type: Date, default: Date.now },
+  },
+
+  // for future
+  //   subscription: {
+  //     plan: { type: String, default: "free" },
+  //     status: { type: String, default: "active" },
+  //     startDate: Date,
+  //     endDate: Date,
+  //     stripeCustomerId: String,
+  //     stripeSubscriptionId: String,
+  //   },
+});
+
+UserSchema.pre("save", function (next) {
+  if (!this.displayImage) {
+    this.displayImage = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+      this.username
+    )}`;
+  }
+  next();
+});
+
+UserSchema.index({ firebaseUid: 1 });
+UserSchema.index({ email: 1 });
+
+export const User = mongoose.model("User", UserSchema);

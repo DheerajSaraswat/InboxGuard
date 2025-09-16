@@ -4,7 +4,9 @@ import { ArrowLeft } from "lucide-react";
 import signinImage from "../../assets/signup.jpg";
 import { register } from "../../common/firebase";
 import { useNavigate } from "react-router-dom";
-import toast,{ Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
+import { registerUser } from "../../apiRequests/registerUser";
+import Loader from "../../common/Loader";
 
 const EyeIcon = ({ visible, size = 24, color = "#b2b0b0ff" }) => (
   <svg
@@ -42,7 +44,7 @@ const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -58,20 +60,28 @@ const SignupPage = () => {
     }
 
     try {
-      await register(email, password);
+      setLoading(true);
+      const user = await register(email, password);
+      await registerUser(user);      
       toast.success("Signed up successfully!");
-      navigate("/signin");
+      navigate("/verify-email");
     } catch (error) {
       toast.error("Failed to sign up. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-2 py-10">
-      <Toaster />
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <Loader/>
+        </div>
+      )}
       <div className="w-full max-w-5xl flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden border border-[#2E2E2E] bg-[#1A1A1A]">
         {/* Left column: Signup form */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center px-8 py-12">
+        <div className="w-full md:w-1/2 flex flex-col justify-center p-8">
           <Link
             to="/"
             className="mb-4 flex items-center text-[#E50914] hover:underline w-fit"
@@ -184,7 +194,7 @@ const SignupPage = () => {
             </div>
             <button
               type="submit"
-              className="w-full bg-[#E50914] hover:bg-red-700 text-white py-3 rounded-lg font-semibold text-lg transition-all"
+              className="w-full bg-[#E50914] hover:bg-red-700 text-white py-3 rounded-lg font-semibold text-lg transition-all cursor-pointer"
             >
               Continue with Email
             </button>
@@ -209,18 +219,10 @@ const SignupPage = () => {
         </div>
         {/* Right column: Image area */}
         <div className="hidden md:flex items-center justify-center w-1/2 bg-gradient-to-br from-[#0A0A0A] via-[#1A1A1A] to-[#111111] relative">
-          {!imageLoaded && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#181818]">
-              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#E50914]" />
-            </div>
-          )}
           <img
             src={signinImage}
             alt="Signup Visual"
-            className={`object-cover object-center h-full rounded-r-xl shadow-lg transition-opacity duration-500 ${
-              imageLoaded ? "opacity-100" : "opacity-0"
-            }`}
-            onLoad={() => setImageLoaded(true)}
+            className={`object-cover object-center h-full rounded-r-xl shadow-lg transition-opacity duration-500 `}
           />
         </div>
       </div>
