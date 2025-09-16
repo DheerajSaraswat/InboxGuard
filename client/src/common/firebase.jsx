@@ -51,6 +51,8 @@ export const googleAuth = async (rememberMe) => {
       displayName: user.displayName,
       email: user.email,
       photoURL: user.photoURL,
+      uid: user.uid,
+      username:user.username
     };
   } catch (error) {
     // console.error("Google Auth error:", error);
@@ -65,10 +67,18 @@ export const register = async (email, password) => {
       email,
       password
     );
-    console.log(userCredential);
     const user = userCredential.user;
+    const token = await getIdToken(user, true);
     await sendEmailVerification(user);
     toast.success("Verification email sent!");
+    return {
+      accessToken: token,
+      displayName: user.displayName,
+      email: user.email,
+      photoURL: user.photoURL,
+      uid: user.uid,
+      username: user.username,
+    };
   } catch (error) {
     console.log(error);
     toast.error(error.message || "Registration failed.");
@@ -94,14 +104,17 @@ export const login = async (email, password, rememberMe) => {
         "Email not verified. Please verify your email before logging in."
       );
     }
-
+    
     const token = await getIdToken(user, true);
+
     toast.success("Login successful!");
     return {
       accessToken: token,
       displayName: user.displayName,
       email: user.email,
       photoURL: user.photoURL,
+      uid: user.uid,
+      username: user.username,
     };
   } catch (error) {
     // console.log(error);
@@ -116,6 +129,17 @@ export const resetPassword = async (email) => {
   } catch (error) {
     console.log(error);
     toast.error(error.message || "Failed to send password reset email.");
+    throw error;
+  }
+};
+
+export const logout = async () => {
+  try {
+    await auth.signOut();
+    toast.success("Logged out successfully!");
+  } catch (error) {
+    console.log(error);
+    toast.error(error.message || "Logout failed.");
     throw error;
   }
 };
