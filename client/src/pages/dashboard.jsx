@@ -21,7 +21,6 @@ import {
 
 import React, { useEffect } from "react";
 import logo from "../assets/LightThemeLogo.png"
-import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";

@@ -61,7 +61,8 @@ const userRegisterWithGoogle = asyncHandler(async(req, res)=>{
     const username = `user_${uid.slice(-6)}`;
 
     // Fallback profile image
-    const defaultImage = `https://api.dicebear.com/7.x/identicon/svg?seed=${username}`;
+    const initial = email.charAt(0);
+    const defaultImage = `https://api.dicebear.com/9.x/initials/svg?seed=${initial}`;
 
     // Create new user in MongoDB
     const newUser = await User.create({

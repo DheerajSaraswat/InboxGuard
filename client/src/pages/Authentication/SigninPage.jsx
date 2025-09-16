@@ -103,9 +103,11 @@ const SigninPage = () => {
     try {
       setLoading(true);
       const user = await googleAuth(rememberMe);
-      console.log(user);
+      const res = await registerUserWithGoogle(user);
+      dispatch(sliceLogin({user:res.data.data, token:user.accessToken}))
+      console.log(res.data.data);
       toast.success("Signed in with Google successfully!");
-      Navigate("/dashboard"); // Example navigation after Google login
+      navigate("/dashboard"); // Example navigation after Google login
     } catch (error) {
       toast.error("Google sign-in failed.");
     } finally {
