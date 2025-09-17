@@ -36,7 +36,7 @@ const EyeIcon = ({ visible, size = 24, color = "#b2b0b0ff" }) => (
   </svg>
 );
 
-const SignupPage = () => {
+const SignupPage = ({ isDark }) => {
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -73,13 +73,13 @@ const SignupPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-2 py-10">
+    <div className={`min-h-screen flex items-center justify-center px-2 py-10 transition-colors duration-300 ${isDark ? 'bg-[#0A0A0A]' : 'bg-white'}`}>
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
           <Loader/>
         </div>
       )}
-      <div className="w-full max-w-5xl flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden border border-[#2E2E2E] bg-[#1A1A1A]">
+      <div className={`w-full max-w-5xl flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden border ${isDark ? 'border-[#2E2E2E] bg-[#1A1A1A]' : 'border-[#bbb] bg-white'}`}>
         {/* Left column: Signup form */}
         <div className="w-full md:w-1/2 flex flex-col justify-center p-8">
           <Link
@@ -90,18 +90,18 @@ const SignupPage = () => {
             <ArrowLeft className="w-5 h-5 mr-2" />
             <span>Back to Home</span>
           </Link>
-          <h2 className="text-3xl font-bold text-white mb-6 text-center">
+          <h2 className={`text-3xl font-bold mb-6 text-center ${isDark ? 'text-white' : 'text-[#111]'}`}>
             Sign Up
           </h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-[#BBBBBB] mb-2" htmlFor="email">
+              <label className={`block mb-2 ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`} htmlFor="email">
                 Work Email
               </label>
               <input
                 type="email"
                 id="email"
-                className="w-full px-4 py-3 rounded-lg bg-[#111111] border border-[#2E2E2E] text-white focus:outline-none focus:border-[#E50914]"
+                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:border-[#E50914] ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-white' : 'bg-white border-[#bbb] text-[#111]'}`}
                 value={email}
                 placeholder="name@work.com"
                 onChange={(e) => setEmail(e.target.value)}
@@ -111,7 +111,7 @@ const SignupPage = () => {
             <div className="flex gap-4">
               <div className="w-1/2">
                 <label
-                  className="block text-[#BBBBBB] mb-2"
+                  className={`block mb-2 ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`}
                   htmlFor="firstName"
                 >
                   First Name
@@ -119,7 +119,7 @@ const SignupPage = () => {
                 <input
                   type="text"
                   id="firstName"
-                  className="w-full px-4 py-3 rounded-lg bg-[#111111] border border-[#2E2E2E] text-white focus:outline-none focus:border-[#E50914]"
+                  className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:border-[#E50914] ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-white' : 'bg-white border-[#bbb] text-[#111]'}`}
                   value={firstName}
                   placeholder="First Name"
                   onChange={(e) => setFirstName(e.target.value)}
@@ -127,13 +127,13 @@ const SignupPage = () => {
                 />
               </div>
               <div className="w-1/2">
-                <label className="block text-[#BBBBBB] mb-2" htmlFor="lastName">
+                <label className={`block mb-2 ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`} htmlFor="lastName">
                   Last Name
                 </label>
                 <input
                   type="text"
                   id="lastName"
-                  className="w-full px-4 py-3 rounded-lg bg-[#111111] border border-[#2E2E2E] text-white focus:outline-none focus:border-[#E50914]"
+                  className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:border-[#E50914] ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-white' : 'bg-white border-[#bbb] text-[#111]'}`}
                   value={lastName}
                   placeholder="Last Name"
                   onChange={(e) => setLastName(e.target.value)}
@@ -142,13 +142,13 @@ const SignupPage = () => {
               </div>
             </div>
             <div className="relative">
-              <label className="block text-[#BBBBBB] mb-2" htmlFor="password">
+              <label className={`block mb-2 ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`} htmlFor="password">
                 Password
               </label>
               <input
                 type={showPassword ? "text" : "password"}
                 id="password"
-                className="w-full px-4 py-3 rounded-lg bg-[#111111] border border-[#2E2E2E] text-white focus:outline-none focus:border-[#E50914] pr-12"
+                className={`w-full px-4 py-3 rounded-lg border pr-12 focus:outline-none focus:border-[#E50914] ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-white' : 'bg-white border-[#bbb] text-[#111]'}`}
                 value={password}
                 placeholder="Password"
                 onChange={(e) => setPassword(e.target.value)}
@@ -166,7 +166,7 @@ const SignupPage = () => {
             </div>
             <div className="relative">
               <label
-                className="block text-[#BBBBBB] mb-2"
+                className={`block mb-2 ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`}
                 htmlFor="confirmPassword"
               >
                 Confirm Password
@@ -174,7 +174,7 @@ const SignupPage = () => {
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 id="confirmPassword"
-                className="w-full px-4 py-3 rounded-lg bg-[#111111] border border-[#2E2E2E] text-white focus:outline-none focus:border-[#E50914] pr-12"
+                className={`w-full px-4 py-3 rounded-lg border pr-12 focus:outline-none focus:border-[#E50914] ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-white' : 'bg-white border-[#bbb] text-[#111]'}`}
                 value={confirmPassword}
                 placeholder="Confirm Password"
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -199,7 +199,7 @@ const SignupPage = () => {
               Continue with Email
             </button>
           </form>
-          <div className="mt-6 text-center text-[#BBBBBB] text-xs">
+          <div className={`mt-6 text-center text-xs ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`}>
             By signing up, you agree to our{" "}
             <a href="#" className="text-[#E50914] hover:underline">
               Terms of Use
@@ -211,14 +211,14 @@ const SignupPage = () => {
             .
           </div>
           <div className="mt-2 text-center">
-            <span className="text-[#BBBBBB]">Already have an account?</span>{" "}
+            <span className={isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}>Already have an account?</span>{" "}
             <a href="/signin" className="text-[#E50914] ml-1 hover:underline">
               Sign In
             </a>
           </div>
         </div>
         {/* Right column: Image area */}
-        <div className="hidden md:flex items-center justify-center w-1/2 bg-gradient-to-br from-[#0A0A0A] via-[#1A1A1A] to-[#111111] relative">
+        <div className={`hidden md:flex items-center justify-center w-1/2 relative ${isDark ? 'bg-gradient-to-br from-[#0A0A0A] via-[#1A1A1A] to-[#111111]' : 'bg-gradient-to-br from-[#f3f4f6] via-[#fff] to-[#e5e7eb]'}`}>
           <img
             src={signinImage}
             alt="Signup Visual"

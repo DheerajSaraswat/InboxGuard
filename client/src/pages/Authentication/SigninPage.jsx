@@ -64,7 +64,7 @@ const EyeIcon = ({ visible, size = 24, color = "#b2b0b0ff" }) => (
   </svg>
 );
 
-const SigninPage = () => {
+const SigninPage = ({ isDark }) => {
   const navigate = useNavigate();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [email, setEmail] = useState("");
@@ -116,16 +116,15 @@ const SigninPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-2">
+    <div className={`min-h-screen flex items-center justify-center px-2 transition-colors duration-300 ${isDark ? 'bg-[#0A0A0A]' : 'bg-white'}`}>
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
           <Loader/>
         </div>
       )}
-      <div className="w-full max-w-5xl flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden border border-[#2E2E2E] bg-[#1A1A1A]">
+      <div className={`w-full max-w-5xl flex flex-col md:flex-row rounded-2xl shadow-2xl overflow-hidden border ${isDark ? 'border-[#2E2E2E] bg-[#1A1A1A]' : 'border-[#bbb] bg-white'}`}>
         {/* Left column: Features */}
-        <div className="hidden md:flex items-center justify-center bg-gradient-to-br from-[#0A0A0A] via-[#1A1A1A] to-[#111111] w-1/2 relative">
-
+        <div className={`hidden md:flex items-center justify-center w-1/2 relative ${isDark ? 'bg-gradient-to-br from-[#0A0A0A] via-[#1A1A1A] to-[#111111]' : 'bg-gradient-to-br from-[#f3f4f6] via-[#fff] to-[#e5e7eb]'}`}>
           <img
             src={signinImage}
             alt="Signin Page"
@@ -143,18 +142,18 @@ const SigninPage = () => {
             <ArrowLeft className="w-5 h-5 mr-2" />
             <span>Back to Home</span>
           </Link>
-          <h2 className="text-3xl font-bold text-white mb-6 text-center">
+          <h2 className={`text-3xl font-bold mb-6 text-center ${isDark ? 'text-white' : 'text-[#111]'}`}>
             Sign In
           </h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-[#BBBBBB] mb-2" htmlFor="email">
+              <label className={`block mb-2 ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`} htmlFor="email">
                 Email
               </label>
               <input
                 type="email"
                 id="email"
-                className="w-full px-4 py-3 rounded-lg bg-[#111111] border border-[#2E2E2E] text-[#b2b0b0ff] focus:outline-none focus:border-[#E50914]"
+                className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:border-[#E50914] ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-[#b2b0b0ff]' : 'bg-white border-[#bbb] text-[#111]'}`}
                 value={email}
                 placeholder="Enter your email"
                 onChange={(e) => setEmail(e.target.value)}
@@ -162,13 +161,13 @@ const SigninPage = () => {
               />
             </div>
             <div className="relative ">
-              <label className="block text-[#BBBBBB] mb-2" htmlFor="password">
+              <label className={`block mb-2 ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`} htmlFor="password">
                 Password
               </label>
               <input
                 type={showPassword ? "text" : "password"}
                 id="password"
-                className="w-full px-4 py-3 rounded-lg bg-[#111111] border border-[#2E2E2E] text-[#b2b0b0ff] focus:outline-none focus:border-[#E50914] pr-12 "
+                className={`w-full px-4 py-3 rounded-lg border pr-12 focus:outline-none focus:border-[#E50914] ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-[#b2b0b0ff]' : 'bg-white border-[#bbb] text-[#111]'}`}
                 value={password}
                 placeholder="Enter your password"
                 onChange={(e) => setPassword(e.target.value)}
@@ -185,7 +184,7 @@ const SigninPage = () => {
               </button>
             </div>
             <div className="flex items-center justify-between">
-              <label className="flex items-center text-[#BBBBBB]">
+              <label className={`flex items-center ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`}>
                 <input
                   type="checkbox"
                   className="mr-2"
@@ -200,20 +199,20 @@ const SigninPage = () => {
             </div>
             <button
               type="submit"
-              className="w-full bg-[#E50914] text-white py-3 rounded-lg hover:bg-[#f6121d] transition cursor-pointer font-semibold text-lg"
+              className="w-full bg-[#E50914] text-white py-3 rounded-lg hover:bg-red-700 transition cursor-pointer font-semibold text-lg"
             >
               Sign In
             </button>
           </form>
           <div className="mt-6">
             <div className="flex items-center mb-4">
-              <span className="flex-grow border-t border-[#2E2E2E]" />
-              <span className="mx-4 text-[#BBBBBB]">or</span>
-              <span className="flex-grow border-t border-[#2E2E2E]" />
+              <span className={`flex-grow border-t ${isDark ? 'border-[#2E2E2E]' : 'border-[#bbb]'}`} />
+              <span className={`mx-4 ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`}>or</span>
+              <span className={`flex-grow border-t ${isDark ? 'border-[#2E2E2E]' : 'border-[#bbb]'}`} />
             </div>
             <button
               type="button"
-              className="w-full flex items-center justify-center gap-3 bg-[#111111] border border-[#2E2E2E] hover:border-[#E50914] text-white py-3 rounded-lg font-semibold text-lg transition-all mb-2"
+              className={`w-full flex items-center justify-center gap-3 border hover:border-[#E50914] py-3 rounded-lg font-semibold text-lg transition-all mb-2 ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-white' : 'bg-white border-[#bbb] text-[#111]'}`}
               onClick={handleGoogleAuth}
             >
               <GoogleIcon />
@@ -221,7 +220,7 @@ const SigninPage = () => {
             </button>
           </div>
           <div className="mt-2 text-center">
-            <span className="text-[#BBBBBB]">Don't have an account?</span>
+            <span className={isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}>Don't have an account?</span>
             <button
               onClick={() => navigate("/signup")}
               className="text-[#E50914] ml-2 hover:underline cursor-pointer"

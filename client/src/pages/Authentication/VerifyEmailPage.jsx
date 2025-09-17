@@ -1,14 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { MailCheck } from "lucide-react";
 
-const VerifyEmailPage = () => {
+const VerifyEmailPage = ({ isDark }) => {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center px-4">
-      <div className="bg-[#1A1A1A] rounded-2xl shadow-2xl p-10 max-w-md w-full border border-[#2E2E2E] flex flex-col items-center">
+    <div className={`min-h-screen flex flex-col items-center justify-center px-4 transition-colors duration-300 ${isDark ? 'bg-[#0A0A0A]' : 'bg-white'}`}>
+      <div className={`rounded-2xl shadow-2xl p-10 max-w-md w-full border flex flex-col items-center ${isDark ? 'bg-[#1A1A1A] border-[#2E2E2E]' : 'bg-white border-[#bbb]'}`}>
         <MailCheck className="w-16 h-16 text-[#E50914] mb-6" />
-        <h2 className="text-3xl font-bold text-white mb-4 text-center">Verify Your Email</h2>
-        <p className="text-lg text-[#BBBBBB] mb-8 text-center">
+        <h2 className={`text-3xl font-bold mb-4 text-center ${isDark ? 'text-white' : 'text-[#111]'}`}>Verify Your Email</h2>
+        <p className={`text-lg mb-8 text-center ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`}>
           We've sent a verification link to your email address.<br />
           Please check your spam folder and click the link to activate your account.
         </p>
