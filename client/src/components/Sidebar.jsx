@@ -1,4 +1,6 @@
 import React, {useState} from "react";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   PenSquare,
   Inbox,
@@ -17,7 +19,9 @@ import ComposeModal from "./ComposeModal.jsx";
 
 export default function Sidebar({ isDark }) {
   const [open, setOpen] = useState(false);
-  const [openComposeModal, setOpenComposeModal] = useState(false)
+  const [openComposeModal, setOpenComposeModal] = useState(false);
+  const draftCount = useSelector(state => state.draft.drafts.length);
+  const navigate = useNavigate();
 
   return (
     <>
@@ -111,9 +115,10 @@ export default function Sidebar({ isDark }) {
                   ? "hover:bg-[#232326]/80 text-[#f3f4f6]"
                   : "hover:bg-[#f3f4f6] text-[#111]"
               } transition`}
+              onClick={() => navigate('/drafts')}
             >
-              <FileText className="w-4 h-4" /> Drafts{" "}
-              <span className="ml-auto bg-[#e5e7eb] text-xs px-2 py-1 rounded-full text-[#111]"></span>
+              <FileText className="w-4 h-4" /> Drafts
+              <span className="ml-auto bg-[#e5e7eb] text-xs px-2 py-1 rounded-full text-[#111]">{draftCount}</span>
             </button>
             <button
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
@@ -158,9 +163,7 @@ export default function Sidebar({ isDark }) {
           </button>
         </div>
         {/* Sidebar separation */}
-        {isDark && (
-          <div className="absolute top-0 right-0 h-full w-[2px] bg-gradient-to-b from-[#E50914]/30 via-[#23232b]/60 to-transparent opacity-80" />
-        )}
+       
       </div>
       {/* Overlay for mobile */}
       {open && (

@@ -2,6 +2,7 @@ import HomePage from "./pages/HomePage.jsx";
 import SigninPage from "./pages/Authentication/SigninPage.jsx";
 import SignupPage from "./pages/Authentication/SignupPage.jsx";
 import { Routes, Route } from "react-router-dom";
+import DraftsPage from "./pages/DraftsPage.jsx";
 import ForgotPasswordPage from "./pages/Authentication/ForgotPasswordPage.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import AnimationWrapper from "./common/AnimationWrapper.jsx";
@@ -40,7 +41,8 @@ function App() {
           path="/reset-password"
           element={<ForgotPasswordPage isDark={isDark} />}
         />
-        <Route path="/dashboard" element={<Dashboard isDark={isDark} />} />
+  <Route path="/dashboard" element={<Dashboard isDark={isDark} />} />
+  <Route path="/drafts" element={<DraftsPage />} />
       </Routes>
     </div>
   );

@@ -25,8 +25,7 @@ export default function MailCards({ isDark, setSelectedEmail }) {
       {emails.map(email => (
         <div
           key={email.id}
-          className={`rounded-3xl flex p-4 px-10 cursor-pointer transition-all duration-200 shadow-2xl hover:scale-[1.01] border-2 ${isDark ? 'bg-gradient-to-br from-[#232326]/90 via-[#18181b]/90 to-[#232326]/80 border-[#232326] hover:border-[#E50914] backdrop-blur-[2px]' : 'bg-white border-[#e5e7eb] hover:border-blue-600'}`}
-          style={isDark ? {boxShadow:'0 4px 32px 0 #0006, 0 1.5px 0 0 #E50914 inset'} : {boxShadow:'0 4px 32px 0 #3b82f633, 0 1.5px 0 0 #2563eb inset'}}
+          className={`rounded-3xl flex p-4 px-10 cursor-pointer transition-all duration-200 shadow-2xl hover:scale-[1.01] border-2 ${isDark ? 'bg-gradient-to-br from-[#232326]/90 via-[#18181b]/90 to-[#232326]/80 border-[#232326] backdrop-blur-[2px]' : 'bg-white border-[#e5e7eb] '}`}
           onClick={() => setSelectedEmail(email)}
         >
           <div className={`flex items-center gap-4`}>

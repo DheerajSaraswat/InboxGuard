@@ -29,7 +29,7 @@ function Navbar({ isMenuOpen, setIsMenuOpen, isDark: isDarkProp }) {
               <a href="#how-it-works" className={`${isDark ? 'text-[#BBBBBB] hover:text-white' : 'text-[#444] hover:text-[#E50914]'}`}>How It Works</a>
               <a href="#applications" className={`${isDark ? 'text-[#BBBBBB] hover:text-white' : 'text-[#444] hover:text-[#E50914]'}`}>Applications</a>
               <button
-                className="bg-transparent p-2 rounded-full hover:bg-[#232326] transition-all"
+                className="bg-transparent p-2 rounded-full cursor-pointer transition-all"
                 title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
                 onClick={() => dispatch(toggleTheme())}
               >
