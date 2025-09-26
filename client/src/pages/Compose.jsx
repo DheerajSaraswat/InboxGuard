@@ -300,11 +300,14 @@ const EmailEditor = ({ isDark }) => {
           mimeType: f.type,
         })),
       };
-      const payload = phishingWrap
-        ? { email, phishingReport: phishingWrap }
-        : { email };
-      await api.post("/emails/send", payload);
-      toast.success("Email sent");
+      console.log(email);
+      console.log(".......................")
+      console.log(phishingWrap)
+      // const payload = phishingWrap
+      //   ? { email, phishingReport: phishingWrap }
+      //   : { email };
+      // await api.post("/emails/send", payload);
+      // toast.success("Email sent");
     } catch (err) {
       console.error(err);
       toast.error("Failed to send email");
