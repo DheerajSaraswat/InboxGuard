@@ -88,7 +88,7 @@ const SigninPage = ({ isDark }) => {
       const res = await loginUser()
       dispatch(sliceLogin({user:res.data.data, token:accessToken}))
       toast.success("Signed in successfully!");
-      navigate("/dashboard");
+      navigate("/user/u0");
     } catch (err) {
       console.log(err);
       toast.error("Failed to sign in.");
@@ -107,7 +107,7 @@ const SigninPage = ({ isDark }) => {
       dispatch(sliceLogin({user:res.data.data, token:user.accessToken}))
       console.log(res.data.data);
       toast.success("Signed in with Google successfully!");
-      navigate("/dashboard"); // Example navigation after Google login
+      navigate("/user/u0"); // Example navigation after Google login
     } catch (error) {
       toast.error("Google sign-in failed.");
     } finally {

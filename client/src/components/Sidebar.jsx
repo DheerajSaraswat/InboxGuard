@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import logo from "../assets/LightThemeLogo.png";
 import ComposeModal from "./ComposeModal.jsx";
+import { Link } from "react-router-dom";
 
 
 
@@ -63,8 +64,8 @@ export default function Sidebar({ isDark }) {
       >
         <div className="p-4">
           <img src={logo} className={`pb-4 ${isDark ? "invert" : ""}`} />
-          <button
-            onClick={() => setOpenComposeModal(true)}
+          <Link
+            to="/user/u0/compose?compose=new"
             className={`w-full mb-6 gap-2 ${
               isDark
                 ? "bg-gradient-to-r from-[#232326] via-[#18181b] to-[#232326] text-[#f3f4f6] border border-[#333] shadow-lg/80"
@@ -73,7 +74,7 @@ export default function Sidebar({ isDark }) {
             style={{ fontSize: "1rem", letterSpacing: "0.02em" }}
           >
             <PenSquare className="w-5 h-5 mr-2" /> Compose
-          </button>
+          </Link>
           <nav className="flex flex-col gap-4 text-[1rem]">
             <button
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${

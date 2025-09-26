@@ -7,6 +7,7 @@ import ForgotPasswordPage from "./pages/Authentication/ForgotPasswordPage.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import AnimationWrapper from "./common/AnimationWrapper.jsx";
 import VerifyEmailPage from "./pages/Authentication/VerifyEmailPage.jsx";
+import Compose from "./pages/Compose.jsx";
 import { useSelector } from "react-redux";
 
 function App() {
@@ -41,8 +42,9 @@ function App() {
           path="/reset-password"
           element={<ForgotPasswordPage isDark={isDark} />}
         />
-  <Route path="/dashboard" element={<Dashboard isDark={isDark} />} />
-  <Route path="/drafts" element={<DraftsPage />} />
+        <Route path="/user/u0" element={<Dashboard isDark={isDark} />}/>
+          <Route path="/user/u0/compose" element={<Compose isDark={isDark}/>} />
+        <Route path="/drafts" element={<DraftsPage />} />
       </Routes>
     </div>
   );

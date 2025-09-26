@@ -1,5 +1,4 @@
-import mongoose from "mongoose";
-import { Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const PhishingReportSchema = new Schema({
   reportedBy: String,
@@ -11,23 +10,17 @@ const PhishingReportSchema = new Schema({
     subjectHash: String,
     contentSignature: String,
     urls: [String],
-    attachmentHashes: [String],
   },
   analysis: {
     riskScore: Number,
     detectedPatterns: [String],
-    similarReports: Number,
     verificationStatus: { type: String, default: "pending" },
-    verifiedBy: String,
-    verifiedAt: Date,
-  },
-  impact: {
-    affectedUsers: Number,
-    blockedAttempts: Number,
-    updatedRules: [String],
   },
   status: { type: String, default: "active" },
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const PhishingReport = mongoose.model("PhishingReport", PhishingReportSchema);
+export const PhishingReport = mongoose.model(
+  "PhishingReport",
+  PhishingReportSchema
+);
