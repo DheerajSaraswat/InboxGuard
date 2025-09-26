@@ -237,8 +237,8 @@ export function scanEmailAndReport(content) {
     reportType: "auto-scan",
     confidence: result.riskScore,
     emailData: {
-      subjectHash: Buffer.from(content.subject).toString("base64"),
-      contentSignature: Buffer.from(content.text).toString("base64"),
+      subjectHash: btoa(content.subject || ""),
+      contentSignature: btoa(content.text || ""),
       urls: result.urls.map((u) => u.original),
     },
     analysis: {
