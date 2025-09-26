@@ -1,0 +1,934 @@
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Link,
+  Paperclip,
+  Code,
+  Undo,
+  Redo,
+  FileText,
+  Bot,
+  Edit3,
+  Type,
+  Layout,
+  MessageSquare,
+  X,
+  Plus,
+  Send,
+  Menu,
+  Quote as QuoteIcon,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import { GoogleGenAI } from "@google/genai";
+import { AdvancedPhishingScanner, scanEmailAndReport } from "../utils/scanner";
+import PhishingAlert from "../components/PhishingAlert";
+import api from "../utils/api";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import UnderlineExt from "@tiptap/extension-underline";
+import Placeholder from "@tiptap/extension-placeholder";
+import LinkExt from "@tiptap/extension-link";
+import TextAlign from "@tiptap/extension-text-align";
+import Blockquote from "@tiptap/extension-blockquote";
+
+const EmailEditor = ({ isDark }) => {
+  const [recipients, setRecipients] = useState(["recipient@example.com"]);
+  const [subject, setSubject] = useState("");
+  const [emailContent, setEmailContent] = useState("");
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [showAssistant, setShowAssistant] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [assistantMessages, setAssistantMessages] = useState([
+    {
+      id: 1,
+      text: "Hi! I'm your AI writing assistant. I can help you write better emails, suggest improvements, or generate content. How can I help you today?",
+      time: "02:57 pm",
+      isAssistant: true,
+    },
+  ]);
+  const [assistantInput, setAssistantInput] = useState("");
+  const [newRecipient, setNewRecipient] = useState("");
+  const [isAssistantTyping, setIsAssistantTyping] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkText, setLinkText] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+
+  const fileInputRef = useRef(null);
+  const undoStack = useRef([]);
+  const redoStack = useRef([]);
+  const scannerRef = useRef(new AdvancedPhishingScanner());
+  const [showAlert, setShowAlert] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const dragCounter = useRef(0);
+  const [isEditorDragging, setIsEditorDragging] = useState(false);
+
+  // TipTap editor
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        bulletList: { keepMarks: true },
+        orderedList: { keepMarks: true },
+      }),
+      UnderlineExt,
+      LinkExt.configure({
+        autolink: true,
+        linkOnPaste: true,
+        openOnClick: true,
+        HTMLAttributes: {
+          target: "_blank",
+          rel: "noopener noreferrer nofollow",
+        },
+      }),
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Blockquote,
+      Placeholder.configure({
+        placeholder: "Write your email content here...",
+      }),
+    ],
+    content: emailContent || "<p></p>",
+    onUpdate: ({ editor }) => {
+      // Keep the html state in sync
+      setEmailContent(editor.getHTML());
+    },
+  });
+
+  // Helpers for recipients & files (kept same behavior)
+  const addRecipient = () => {
+    if (newRecipient.trim() && !recipients.includes(newRecipient.trim())) {
+      setRecipients([...recipients, newRecipient.trim()]);
+      setNewRecipient("");
+    }
+  };
+  const removeRecipient = (index) =>
+    setRecipients(recipients.filter((_, i) => i !== index));
+  const handleRecipientKeyPress = (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addRecipient();
+    }
+  };
+
+  const handleFileUpload = (files) => {
+    const newFiles = Array.from(files).map((file) => ({
+      id: Date.now() + Math.random(),
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      file,
+    }));
+    setAttachedFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    handleFileUpload(files);
+    dragCounter.current = 0;
+    setIsEditorDragging(false);
+  };
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsEditorDragging(true);
+  };
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    dragCounter.current += 1;
+    setIsEditorDragging(true);
+  };
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) setIsEditorDragging(false);
+  };
+  const removeFile = (fileId) =>
+    setAttachedFiles(attachedFiles.filter((f) => f.id !== fileId));
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  // AI assistant (use editor.getText() for plain content)
+  const sendAssistantMessage = async () => {
+    const question = assistantInput.trim();
+    if (!question || !editor) return;
+
+    const newMessage = {
+      id: Date.now(),
+      text: question,
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      isAssistant: false,
+    };
+
+    // Optimistically update the UI with the user's new message immediately
+    setAssistantMessages((prev) => [...prev, newMessage]);
+    setAssistantInput("");
+    setIsAssistantTyping(true);
+
+    try {
+      const genAI = new GoogleGenAI({
+        apiKey: import.meta.env.VITE_GEMINI_API_KEY,
+      });
+
+      // Construct the conversation history with the CORRECT structure
+      const conversation = [
+        {
+          role: "user",
+          parts: [
+            {
+              text: "You are an assistant that helps draft emails. Keep replies as email-ready text only with paragraphs and lists. Do not modify the subject.",
+            },
+          ],
+        },
+
+        // Correctly map history to parts: [{ text: "..." }]
+        ...assistantMessages.map((m) => ({
+          role: m.isAssistant ? "assistant" : "user",
+          parts: [{ text: m.text }], // <-- This is the fix!
+        })),
+
+        {
+          role: "user",
+          parts: [
+            { text: `Current email body (plain text): ${editor.getText()}` },
+          ],
+        },
+
+        // Add the latest user question
+        { role: "user", parts: [{ text: question }] },
+      ];
+
+      const result = await genAI.models.generateContent({
+        model: "gemini-2.0-flash-001",
+        contents: conversation,
+      });
+
+      const responseText = result.text || "";
+      const aiResponse = {
+        id: Date.now() + 1,
+        text: responseText,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        isAssistant: true,
+      };
+
+      // Add the AI response to the history
+      setAssistantMessages((prev) => [...prev, aiResponse]);
+    } catch (err) {
+      console.error("AI error", err);
+      // You should also remove the last user message if the API failed
+      setAssistantMessages((prev) => prev.slice(0, -1));
+      toast.error("AI request failed");
+    } finally {
+      setIsAssistantTyping(false);
+    }
+  };
+
+  const handleQuickAction = (action) => {
+    let message = "";
+    switch (action) {
+      case "improve":
+        message = "Please help me improve this email";
+        break;
+      case "formal":
+        message = "Make this email more formal";
+        break;
+      case "casual":
+        message = "Make this email more casual";
+        break;
+      case "template":
+        message = "Show me an email template";
+        break;
+      default:
+        break;
+    }
+    setAssistantInput(message);
+    setTimeout(() => sendAssistantMessage(), 100);
+  };
+
+  // Send flow: use editor.getText() for plain text checks and editor.getHTML() for body
+  const handleSendEmail = async () => {
+    if (recipients.length === 0) {
+      toast.error("Please add at least one recipient");
+      return;
+    }
+    if (!subject.trim()) {
+      toast.error("Please add a subject line");
+      return;
+    }
+    const plain = editor ? editor.getText().trim() : "";
+    if (!plain) {
+      toast.error("Please add email content");
+      return;
+    }
+    setIsScanning(true);
+    const text = editor ? editor.getText() : "";
+    const result = scannerRef.current.scan({ text, subject });
+    setIsScanning(false);
+    if (result.riskLevel !== "minimal") {
+      setScanResult(result);
+      setShowAlert(true);
+      return;
+    }
+    await sendEmail();
+  };
+
+  const sendEmail = async (phishingWrap = null) => {
+    try {
+      const email = {
+        to: recipients,
+        subject,
+        body: editor ? editor.getHTML() : emailContent,
+        attachments: attachedFiles.map((f) => ({
+          fileName: f.name,
+          fileSize: f.size,
+          mimeType: f.type,
+        })),
+      };
+      const payload = phishingWrap
+        ? { email, phishingReport: phishingWrap }
+        : { email };
+      await api.post("/emails/send", payload);
+      toast.success("Email sent");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to send email");
+    }
+  };
+
+  const handleSendAnyway = async () => {
+    if (!scanResult) return;
+    const reportWrap = scanEmailAndReport({
+      subject,
+      text: editor ? editor.getText() : "",
+    });
+    await sendEmail(reportWrap);
+    setShowAlert(false);
+    setScanResult(null);
+  };
+
+  const handleReview = () => setShowAlert(false);
+
+  const handleSaveDraft = async () => {
+    try {
+      const draft = {
+        to: recipients,
+        subject,
+        body: editor ? editor.getHTML() : emailContent,
+        attachments: attachedFiles,
+      };
+      localStorage.setItem("inboxguard_draft", JSON.stringify(draft));
+      toast.success("Draft saved");
+    } catch (e) {
+      toast.error("Failed to save draft");
+    }
+  };
+
+  // ---------------------------
+  // TipTap toolbar glue
+  // ---------------------------
+  const formatButtons = [
+    { icon: Bold, title: "Bold", action: "bold" },
+    { icon: Italic, title: "Italic", action: "italic" },
+    { icon: Underline, title: "Underline", action: "underline" },
+    { icon: List, title: "Bullet List", action: "bulletList" },
+    { icon: ListOrdered, title: "Numbered List", action: "orderedList" },
+    { icon: AlignLeft, title: "Align Left", action: "alignLeft" },
+    { icon: AlignCenter, title: "Align Center", action: "alignCenter" },
+    { icon: AlignRight, title: "Align Right", action: "alignRight" },
+    { icon: Link, title: "Insert Link", action: "link" },
+    { icon: QuoteIcon, title: "Quote", action: "blockquote" },
+    { icon: Paperclip, title: "Attach File", action: "attach" },
+    { icon: Code, title: "Code Block", action: "codeBlock" },
+    { icon: Undo, title: "Undo", action: "undo" },
+    { icon: Redo, title: "Redo", action: "redo" },
+  ];
+
+  const isActive = (action) => {
+    if (!editor) return false;
+    switch (action) {
+      case "bold":
+        return editor.isActive("bold");
+      case "italic":
+        return editor.isActive("italic");
+      case "underline":
+        return editor.isActive("underline");
+      case "bulletList":
+        return editor.isActive("bulletList");
+      case "orderedList":
+        return editor.isActive("orderedList");
+      case "link":
+        return editor.isActive("link");
+      case "codeBlock":
+        return editor.isActive("codeBlock");
+      case "blockquote":
+        return editor.isActive("blockquote");
+      default:
+        return false;
+    }
+  };
+
+  const handleFormatClick = (action) => {
+    if (!editor && action !== "attach") return;
+    switch (action) {
+      case "bold":
+        editor.chain().focus().toggleBold().run();
+        break;
+      case "italic":
+        editor.chain().focus().toggleItalic().run();
+        break;
+      case "underline":
+        editor.chain().focus().toggleUnderline().run();
+        break;
+      case "bulletList":
+        editor.chain().focus().toggleBulletList().run();
+        break;
+      case "orderedList":
+        editor.chain().focus().toggleOrderedList().run();
+        break;
+      case "alignLeft":
+        editor.chain().focus().setTextAlign("left").run();
+        break;
+      case "alignCenter":
+        editor.chain().focus().setTextAlign("center").run();
+        break;
+      case "alignRight":
+        editor.chain().focus().setTextAlign("right").run();
+        break;
+      case "link": {
+        // capture current selection text, open modal
+        const { from, to, empty } = editor.state.selection;
+        const selected = !empty
+          ? editor.state.doc.textBetween(from, to, " ")
+          : "";
+        setLinkText(selected || "");
+        setLinkUrl("");
+        setShowLinkModal(true);
+        break;
+      }
+      case "blockquote":
+        editor.chain().focus().toggleBlockquote().run();
+        break;
+      case "codeBlock":
+        editor.chain().focus().toggleCodeBlock().run();
+        break;
+      case "undo":
+        editor.chain().focus().undo().run();
+        break;
+      case "redo":
+        editor.chain().focus().redo().run();
+        break;
+      case "attach":
+        fileInputRef.current?.click();
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Apply hyperlink using TipTap commands (supports selected text or inserted text)
+  const applyHyperlink = () => {
+    if (!editor) {
+      setShowLinkModal(false);
+      return;
+    }
+    const url = linkUrl.trim();
+    if (!url) {
+      setShowLinkModal(false);
+      return;
+    }
+    const normalized = /^(https?:)?\/\//i.test(url) ? url : `https://${url}`;
+    const { empty } = editor.state.selection;
+    const text = linkText.trim() || normalized;
+
+    if (!empty) {
+      // If selection exists and no custom text -> just set link
+      if (!linkText.trim()) {
+        editor
+          .chain()
+          .focus()
+          .extendMarkRange("link")
+          .setLink({ href: normalized })
+          .run();
+      } else {
+        // replace selection with custom link text
+        editor
+          .chain()
+          .focus()
+          .deleteSelection()
+          .insertContent(
+            `<a href="${normalized}" target="_blank" rel="noopener noreferrer">${text}</a>`
+          )
+          .run();
+      }
+    } else {
+      // insert new anchor at caret
+      editor
+        .chain()
+        .focus()
+        .insertContent(
+          `<a href="${normalized}" target="_blank" rel="noopener noreferrer">${text}</a>`
+        )
+        .run();
+    }
+
+    setShowLinkModal(false);
+    setLinkText("");
+    setLinkUrl("");
+  };
+
+  // when component unmounts, destroy editor
+  useEffect(() => {
+    return () => {
+      editor?.destroy();
+    };
+  }, [editor]);
+
+  // ---------- UI (kept your layout, only toolbar button logic changed) ----------
+  return (
+    <div className="min-h-screen max-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 p-4 sticky top-0 z-10 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Menu size={20} className="text-gray-600" />
+            </button>
+            <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Email Editor
+            </h1>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowAssistant(!showAssistant)}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Bot
+                size={20}
+                className={showAssistant ? "text-blue-600" : "text-gray-400"}
+              />
+            </button>
+            <button
+              onClick={handleSendEmail}
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            >
+              <Send size={16} />
+              <span className="hidden sm:inline">Send</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Editor area */}
+        <div className="flex-1 lg:overflow-y-auto bg-white lg:bg-transparent">
+          <div className="hidden lg:flex items-center justify-between p-6 bg-white rounded-xl shadow-sm mx-6 mt-6 border border-gray-100 flex-shrink-0">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Email Editor
+            </h1>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleSaveDraft}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-3 rounded-xl transition-all shadow-sm"
+              >
+                Save as Draft
+              </button>
+              <button
+                onClick={handleSendEmail}
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center space-x-2 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+              >
+                <Send size={18} />
+                <span>Send Email</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 lg:p-6 lg:mt-0 mt-2">
+            <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
+              <div className="p-4 lg:p-6 space-y-6">
+                {/* Recipients */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    To
+                  </label>
+                  <div className="border-2 border-gray-200 hover:border-blue-300 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50 rounded-xl p-3 min-h-[50px] flex flex-wrap items-center gap-2 transition-all">
+                    {recipients.map((recipient, index) => (
+                      <div
+                        key={index}
+                        className="bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 px-3 py-1.5 rounded-xl flex items-center space-x-2 text-sm font-medium border border-blue-200"
+                      >
+                        <span>{recipient}</span>
+                        <button
+                          onClick={() => removeRecipient(index)}
+                          className="text-blue-500 hover:text-blue-700 p-1 rounded-full transition-colors"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    <input
+                      type="email"
+                      value={newRecipient}
+                      onChange={(e) => setNewRecipient(e.target.value)}
+                      onKeyDown={handleRecipientKeyPress}
+                      onBlur={addRecipient}
+                      placeholder={
+                        recipients.length === 0 ? "Add recipient..." : ""
+                      }
+                      className="flex-1 min-w-[150px] outline-none text-gray-700 placeholder-gray-400"
+                    />
+                    <button
+                      onClick={addRecipient}
+                      className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-blue-50 transition-colors"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 ml-3">
+                    Press Enter or comma to add multiple recipients
+                  </p>
+                </div>
+
+                {/* Subject */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="Enter a clear and concise subject line..."
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-400 transition-all text-gray-800"
+                  />
+                </div>
+
+                {/* Formatting toolbar */}
+                <div>
+                  <div className="flex items-center space-x-1 p-2 border border-gray-200 rounded-t-xl bg-gray-50/70 overflow-x-auto">
+                    {formatButtons.map((button, index) => {
+                      const active = isActive(button.action);
+                      return (
+                        <button
+                          key={index}
+                          title={button.title}
+                          onClick={() => handleFormatClick(button.action)}
+                          className={`p-2 hover:bg-gray-200 rounded-lg transition-colors active:bg-blue-200/50 ${
+                            active ? "bg-blue-100 text-blue-700" : ""
+                          }`}
+                        >
+                          <button.icon size={18} className="text-gray-600" />
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Editor area with drag/drop */}
+                  <div className="relative">
+                    <div
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      className="w-full min-h-[300px] border-x-2 border-b-2 border-gray-200 rounded-b-xl"
+                      style={{
+                        borderStyle: isEditorDragging ? "dashed" : undefined,
+                        backgroundColor: isEditorDragging
+                          ? "#f8fafc"
+                          : undefined,
+                      }}
+                    >
+                      <EditorContent
+                        editor={editor}
+                        className="prose prose-sm max-w-none px-4 py-3 focus:outline-none text-gray-800"
+                      />
+                    </div>
+                    {isEditorDragging && (
+                      <div className="absolute inset-0 flex items-center justify-center text-gray-500 pointer-events-none">
+                        Drop files to attach
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Link modal */}
+                {showLinkModal && (
+                  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold text-gray-800">
+                          Insert Link
+                        </h3>
+                        <button
+                          onClick={() => setShowLinkModal(false)}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="text-xs text-gray-600">Text</label>
+                          <input
+                            value={linkText}
+                            onChange={(e) => setLinkText(e.target.value)}
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-indigo-200"
+                            placeholder="Visible text"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-600">URL</label>
+                          <input
+                            value={linkUrl}
+                            onChange={(e) => setLinkUrl(e.target.value)}
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-indigo-200"
+                            placeholder="https://example.com"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-3 flex justify-end gap-2">
+                        <button
+                          onClick={() => setShowLinkModal(false)}
+                          className="px-3 py-2 rounded bg-gray-100 hover:bg-gray-200"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={applyHyperlink}
+                          className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          Insert
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Attachments */}
+                {attachedFiles.length > 0 && (
+                  <div className="pt-4 border-t border-gray-100">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                      Attachments ({attachedFiles.length})
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {attachedFiles.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center justify-between bg-blue-50/50 border border-blue-200 p-3 rounded-xl shadow-sm"
+                        >
+                          <div className="flex items-center space-x-3 truncate">
+                            <FileText
+                              size={20}
+                              className="text-blue-600 flex-shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <span className="text-sm font-medium text-gray-800 truncate block">
+                                {file.name}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {formatFileSize(file.size)}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeFile(file.id)}
+                            className="text-red-500 hover:text-red-700 p-1 ml-2 rounded-full hover:bg-red-50 transition-colors flex-shrink-0"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleFileUpload(e.target.files)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* AI Assistant Panel (unchanged) */}
+        {showAssistant && (
+          <div className="w-full lg:w-96 bg-white border-l border-gray-200 flex flex-col shadow-xl lg:shadow-none flex-shrink-0">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md">
+                  <Bot size={16} className="text-white" />
+                </div>
+                <span className="font-bold text-gray-800">
+                  AI Writing Assistant
+                </span>
+              </div>
+              <button
+                onClick={() => setShowAssistant(false)}
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-gray-100 flex-shrink-0">
+              <h3 className="text-sm font-bold text-gray-700 mb-3">
+                Quick Actions
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                {["improve", "formal", "casual", "template"].map((action) => (
+                  <button
+                    key={action}
+                    onClick={() => handleQuickAction(action)}
+                    className="flex items-center space-x-2 px-3 py-2 bg-gray-50 hover:bg-blue-100/50 border border-gray-200 rounded-xl transition-colors text-left text-sm font-medium text-gray-700 shadow-sm"
+                  >
+                    {action === "improve" && (
+                      <Edit3 size={16} className="text-blue-500" />
+                    )}
+                    {action === "formal" && (
+                      <Type size={16} className="text-blue-500" />
+                    )}
+                    {action === "casual" && (
+                      <MessageSquare size={16} className="text-blue-500" />
+                    )}
+                    {action === "template" && (
+                      <Layout size={16} className="text-blue-500" />
+                    )}
+                    <span className="capitalize">{action}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 flex-1 overflow-y-auto space-y-4">
+              {assistantMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`max-w-[85%] ${
+                    message.isAssistant
+                      ? "bg-gray-100 rounded-bl-xl rounded-tr-xl rounded-br-xl self-start"
+                      : "bg-blue-500 text-white rounded-tl-xl rounded-tr-xl rounded-bl-xl ml-auto"
+                  } rounded-xl p-3 shadow-sm`}
+                  style={{ wordBreak: "break-word" }}
+                >
+                  <p
+                    className={`text-sm ${
+                      message.isAssistant ? "text-gray-800" : "text-white"
+                    } whitespace-pre-wrap`}
+                  >
+                    {message.text}
+                  </p>
+                  <span
+                    className={`text-xs mt-1 block ${
+                      message.isAssistant ? "text-gray-500" : "text-blue-200"
+                    } text-right`}
+                  >
+                    {message.time}
+                  </span>
+                </div>
+              ))}
+
+              {isAssistantTyping && (
+                <div className="max-w-[85%] bg-gray-100 rounded-bl-xl rounded-tr-xl rounded-br-xl p-3 shadow-sm flex items-center space-x-2">
+                  <Bot size={16} className="text-blue-500 animate-pulse" />
+                  <span className="text-sm text-gray-600">
+                    Assistant is typing...
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={assistantInput}
+                  onChange={(e) => setAssistantInput(e.target.value)}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && sendAssistantMessage()
+                  }
+                  placeholder="Ask for help with your email..."
+                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-500 text-sm text-gray-700 transition-all"
+                  disabled={isAssistantTyping}
+                />
+                <button
+                  onClick={sendAssistantMessage}
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-3 rounded-xl transition-all shadow-md flex items-center justify-center"
+                  disabled={isAssistantTyping}
+                >
+                  <Send size={18} />
+                </button>
+                <button
+                  onClick={() => {
+                    const last = [...assistantMessages].reverse().find((m) => m.isAssistant);
+                    if (!last) { toast.error("No assistant reply to insert"); return; }
+                    const subjectMatch = last.text.match(/\bSubject\s*:\s*(.+)/i);
+                    const contentMatch = last.text.match(/\bContent\s*:\s*([\s\S]*)/i);
+                    if (subjectMatch && subjectMatch[1]) setSubject(subjectMatch[1].trim());
+                    const raw = contentMatch ? contentMatch[1].trim() : last.text;
+                    const html = raw
+                      .split(/\n\n+/)
+                      .map((block) => block.trim())
+                      .filter(Boolean)
+                      .map((b) => /^(\-|\*|\d+\.)\s/.test(b)
+                        ? `<ul>${b.split(/\n/).map((l) => l.replace(/^\s*(\-|\*|\d+\.)\s+/, "").trim()).filter(Boolean).map((i)=>`<li>${i}</li>`).join("")}</ul>`
+                        : `<p>${b.replace(/\n/g, "<br/>")}</p>`)
+                      .join("");
+                    editor?.chain().focus().setContent(html).run();
+                    toast.success("Inserted into editor");
+                  }}
+                  className="px-4 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-all shadow-sm"
+                  title="Insert last assistant reply into subject and body"
+                >
+                  Insert
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!showAssistant && (
+          <button
+            onClick={() => setShowAssistant(true)}
+            className="fixed right-6 bottom-6 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white p-4 rounded-full shadow-2xl transition-all transform hover:scale-110 hidden lg:block z-20"
+            title="Open AI Assistant"
+          >
+            <Bot size={24} />
+          </button>
+        )}
+      </div>
+
+      {showAlert && scanResult && (
+        <PhishingAlert
+          scanResult={scanResult}
+          onReview={handleReview}
+          onSendAnyway={handleSendAnyway}
+        />
+      )}
+    </div>
+  );
+};
+
+export default EmailEditor;
