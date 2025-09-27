@@ -104,4 +104,21 @@ const userLogin = asyncHandler(async(req, res)=>{
   }
 })
 
-export {userRegister, userRegisterWithGoogle, userLogin};
+const storePublicKey = asyncHandler(async(req,res)=>{
+  const {publicKey} = req.body
+  const {user_id} = req.user
+  
+  if(!publicKey){
+    throw new ApiError(400, "Public key is required.")
+  }
+  const user = await User.findOne({firebaseUid: user_id})
+  if(!user){
+    throw new ApiError(404, "User not found.")
+  }
+  user.securitySettings.encryption.publicKey = publicKey;
+  user.securitySettings.encryption.keyGeneratedAt = new Date();
+  await user.save();
+  res.status(200).json(new ApiResponse(200, null, "Public key stored successfully."))
+})
+
+export {userRegister, userRegisterWithGoogle, userLogin, storePublicKey};
