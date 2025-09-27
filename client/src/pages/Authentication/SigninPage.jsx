@@ -10,6 +10,7 @@ import { loginUser } from "../../apiRequests/loginUser";
 import { useDispatch } from "react-redux";
 import { sliceLogin } from "../../redux/slices/authSlice";
 import Loader from "../../common/Loader";
+import { initializeUserKeys } from "../../utils/crypto";
 
 const GoogleIcon = () => (
    <svg
@@ -86,6 +87,7 @@ const SigninPage = ({ isDark }) => {
       setLoading(true);
       const {accessToken} = await login(email, password, rememberMe);
       const res = await loginUser()
+      await initializeUserKeys(res.data.data.firebaseUid);
       dispatch(sliceLogin({user:res.data.data, token:accessToken}))
       toast.success("Signed in successfully!");
       navigate("/user/u0");
@@ -104,6 +106,7 @@ const SigninPage = ({ isDark }) => {
       setLoading(true);
       const user = await googleAuth(rememberMe);
       const res = await registerUserWithGoogle(user);
+      await initializeUserKeys(res.data.data.firebaseUid);
       dispatch(sliceLogin({user:res.data.data, token:user.accessToken}))
       console.log(res.data.data);
       toast.success("Signed in with Google successfully!");
