@@ -108,7 +108,6 @@ const SigninPage = ({ isDark }) => {
       const res = await registerUserWithGoogle(user);
       await initializeUserKeys(res.data.data.firebaseUid);
       dispatch(sliceLogin({user:res.data.data, token:user.accessToken}))
-      console.log(res.data.data);
       toast.success("Signed in with Google successfully!");
       navigate("/user/u0"); // Example navigation after Google login
     } catch (error) {
