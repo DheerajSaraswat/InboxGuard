@@ -30,6 +30,7 @@ import { GoogleGenAI } from "@google/genai";
 import { AdvancedPhishingScanner, scanEmailAndReport } from "../utils/scanner";
 import PhishingAlert from "../components/PhishingAlert";
 import api from "../utils/api";
+import { encryptEmailAndAttachments } from "../utils/encryption";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import UnderlineExt from "@tiptap/extension-underline";
@@ -290,24 +291,23 @@ const EmailEditor = ({ isDark }) => {
 
   const sendEmail = async (phishingWrap = null) => {
     try {
-      const email = {
-        to: recipients,
+      const htmlBody = editor ? editor.getHTML() : emailContent;
+      const encrypted = await encryptEmailAndAttachments({
         subject,
-        body: editor ? editor.getHTML() : emailContent,
-        attachments: attachedFiles.map((f) => ({
-          fileName: f.name,
-          fileSize: f.size,
-          mimeType: f.type,
-        })),
+        htmlBody,
+        attachments: attachedFiles,
+      });
+
+      const payload = {
+        to: recipients,
+        subject: encrypted.subject,
+        encryptedBody: encrypted.encryptedBody,
+        attachments: encrypted.attachments,
+        phishingReport: phishingWrap || null,
       };
-      console.log(email);
-      console.log(".......................")
-      console.log(phishingWrap)
-      // const payload = phishingWrap
-      //   ? { email, phishingReport: phishingWrap }
-      //   : { email };
-      // await api.post("/emails/send", payload);
-      // toast.success("Email sent");
+
+      await api.post("/emails/send-mail", payload);
+      toast.success("Email sent");
     } catch (err) {
       console.error(err);
       toast.error("Failed to send email");
