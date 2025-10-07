@@ -7,7 +7,7 @@ export default function MailCards({ isDark, setSelectedEmail }) {
       sender: 'security@inboxguard.com',
       subject: 'Suspicious login attempt detected',
       time: 'Today, 2:34 PM',
-      preview: 'We detected to suspicious login attempt from an unknown device.',
+      preview: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Facere incidunt nulla consequatur minus minima est eius distinctio amet dolores recusandae, eveniet maiores possimus deleniti dolore nostrum pariatur dicta ratione iste fuga eos aliquid harum, rem nihil. Natus aliquid qui quis deserunt magni molestias omnis porro explicabo, obcaecati optio in debitis voluptas ",
       important: true,
     },
     {
@@ -25,7 +25,8 @@ export default function MailCards({ isDark, setSelectedEmail }) {
       {emails.map(email => (
         <div
           key={email.id}
-          className={`rounded-3xl flex p-4 px-10 cursor-pointer transition-all duration-200 shadow-2xl hover:scale-[1.01] border-2 ${isDark ? 'bg-gradient-to-br from-[#232326]/90 via-[#18181b]/90 to-[#232326]/80 border-[#232326] backdrop-blur-[2px]' : 'bg-white border-[#e5e7eb] '}`}
+          className={`rounded-3xl flex p-4 px-10 cursor-pointer transition-all duration-200 shadow-2xl hover:scale-[1.01] border-2 ${isDark ? 'bg-gradient-to-br from-[#232326]/90 via-[#18181b]/90 to-[#232326]/80 border-[#232326]' : 'bg-white border-[#e5e7eb] '}`}
+        
           onClick={() => setSelectedEmail(email)}
         >
           <div className={`flex items-center gap-4`}>
@@ -36,7 +37,7 @@ export default function MailCards({ isDark, setSelectedEmail }) {
             <div className="flex flex-col gap-1">
               <span className={`text-base font-semibold ${isDark ? 'text-blue-200' : 'text-black'}`}>{email.sender}</span>
               <span className={`font-bold text-xl ${isDark ? 'text-white' : 'text-black'} font-sans`}>{email.subject}</span>
-              <span className={`text-base ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>{email.preview}</span>
+              <span className={`text-base ${isDark ? 'text-gray-300' : 'text-gray-500'} truncate`} style={{display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '320px'}}>{email.preview}</span>
             </div>
           </div>
           <div className=" flex ml-auto flex-col gap-2">
