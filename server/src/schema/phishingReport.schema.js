@@ -1,21 +1,22 @@
 import mongoose, { Schema } from "mongoose";
 
 const PhishingReportSchema = new Schema({
-  reportedBy: String,
+  reportedBy: { type: Schema.Types.ObjectId, ref: "User" },
   reportedAt: { type: Date, default: Date.now },
   reportType: String,
   confidence: Number,
-  emailData: {
-    senderDomain: String,
-    subjectHash: String,
-    contentSignature: String,
-    urls: [String],
-  },
+  email: { type: Schema.Types.ObjectId, ref: "Email" },
+
   analysis: {
     riskScore: Number,
     detectedPatterns: [String],
-    verificationStatus: { type: String, default: "pending" },
+    verificationStatus: {
+      type: String,
+      enum: ["pending", "verified", "false_positive"],
+      default: "pending",
+    },
   },
+
   status: { type: String, default: "active" },
   updatedAt: { type: Date, default: Date.now },
 });
