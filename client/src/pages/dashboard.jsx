@@ -21,6 +21,7 @@ import { logout } from "../common/firebase";
 import { useDispatch, useSelector } from "react-redux";
 import { sliceLogout } from "../redux/slices/authSlice";
 import { toggleTheme } from "../redux/slices/themeSlice";
+import MailDetail from "../components/MailDetail";
 
 export default function Dashboard() {
   // State for selected email
@@ -121,31 +122,7 @@ export default function Dashboard() {
               </div>
             </div>
           ) : (
-            <div className={`flex-1 flex flex-col min-h-0 ${isDark ? 'bg-[#18181b]' : 'bg-white'}`}>
-              <div className={`p-4 border-b ${isDark ? 'bg-[#232326]' : 'bg-white'} border-gray-400 flex items-center justify-between`}>
-                <div className="flex items-center gap-4">
-                  <button className="bg-transparent p-2 rounded-full hover:bg-[#f3f4f6]" onClick={()=>setSelectedEmail(null)}>
-                    <ChevronDown style={{transform:'rotate(90deg)'}} className="w-6 h-6 font-bold text-black" />
-                  </button>
-                  <button className="bg-transparent p-2 rounded-full hover:bg-[#f3f4f6]" onClick={()=>{/* delete logic here */}}>
-                    <Trash2 className="w-6 h-6 font-bold text-black" />
-                  </button>
-                </div>
-                <span className="text-xs text-[#bdbdbd]">{selectedEmail.time}</span>
-              </div>
-              <div className="flex-1 p-8 flex flex-col gap-4 overflow-y-auto">
-                <div className=" text-2xl">{selectedEmail.subject}</div>
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${isDark ? 'bg-[#18181b] text-[#f3f4f6]' : 'bg-[#e5e7eb] text-[#111]'}`}>{selectedEmail.sender[0].toUpperCase()}</div>
-                  <span className="font-semibold">{selectedEmail.sender}</span>
-                </div>
-                <div className="text-base text-[#bdbdbd]">{selectedEmail.preview}</div>
-                <div className="flex gap-2 mt-4">
-                  <button className="bg-[#E50914] text-white px-4 py-2 rounded-lg font-semibold">Report</button>
-                  <button className="bg-[#e5e7eb] text-[#111] px-4 py-2 rounded-lg font-semibold">Archive</button>
-                </div>
-              </div>
-            </div>
+           <MailDetail email={selectedEmail} isDark={isDark} onBack={() => setSelectedEmail(null)} onDelete={() => {setSelectedEmail(null); /* TODO: delete email */}} />
           )}
         </div>
       </div>
