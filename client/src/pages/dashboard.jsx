@@ -22,10 +22,14 @@ import { useDispatch, useSelector } from "react-redux";
 import { sliceLogout } from "../redux/slices/authSlice";
 import { toggleTheme } from "../redux/slices/themeSlice";
 import MailDetail from "../components/MailDetail";
+import { showEmailLists } from "../apiRequests/showEmailLists";
+import { getAuth } from "firebase/auth";
 
 export default function Dashboard() {
   // State for selected email
   const [selectedEmail, setSelectedEmail] = useState(null);
+  const [emails, setEmails] = useState([]);
+  const [isLoadingEmails, setIsLoadingEmails] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -64,8 +68,58 @@ export default function Dashboard() {
     }
   }, [isDark]);
 
+useEffect(() => {
+  if (!user) return;
+
+  let isMounted = true;
+  const auth = getAuth();
+
+  const fetchEmails = async (silent = false) => {
+    try {
+      if (!silent) setIsLoadingEmails(true);
+      // Ensure a fresh token is available; api layer likely reads it
+      await auth.currentUser?.getIdToken(true);
+      const list = await showEmailLists();
+      if (isMounted) setEmails(Array.isArray(list) ? list : []);
+    } catch (e) {
+      console.error(e);
+      if (isMounted && !silent) toast.error("Failed to load inbox");
+    } finally {
+      if (isMounted && !silent) setIsLoadingEmails(false);
+    }
+  };
+
+  // Initial load right after login: show loader but suppress error toast
+  setIsLoadingEmails(true);
+  fetchEmails(true).finally(() => setIsLoadingEmails(false));
+
+  // Also reload when Firebase rotates/refreshed token
+  const unsubscribe = auth.onIdTokenChanged((u) => {
+    if (u && isMounted) {
+      fetchEmails(false);
+    }
+  });
+
+  return () => {
+    isMounted = false;
+    unsubscribe?.();
+  };
+}, [user]);
+
+
   if(!user) return null;
   
+  if (isLoadingEmails) {
+    return (
+      <div className={`flex min-h-screen h-screen items-center justify-center transition-colors duration-300 ${isDark ? 'bg-[#18181b] text-[#f3f4f6]' : 'bg-[#fafbfc] text-[#111]'}`} style={{fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif'}}>
+        <div className="flex items-center gap-3">
+          <div className="animate-spin h-6 w-6 rounded-full border-2 border-current border-t-transparent" />
+          <span className="text-lg font-medium">Loading your inbox…</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
   <div className={`flex min-h-screen h-screen transition-colors duration-300 ${isDark ? 'bg-[#18181b] text-[#f3f4f6]' : 'bg-[#fafbfc] text-[#111]'}`} style={{fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif'}}>
     <Sidebar isDark={isDark}/>
@@ -118,7 +172,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className={`flex-1 overflow-y-auto ${isDark ? 'bg-gradient-to-b from-[#18181b] via-[#232326] to-[#18181b]' : 'bg-[#F3F6FA]'}`}>
-                <MailCards isDark={isDark} setSelectedEmail={setSelectedEmail} />
+                <MailCards isDark={isDark} emails={emails} setSelectedEmail={setSelectedEmail} />
               </div>
             </div>
           ) : (

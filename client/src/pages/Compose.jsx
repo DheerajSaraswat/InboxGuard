@@ -305,7 +305,7 @@ const EmailEditor = ({ isDark }) => {
         attachments: encrypted.attachments,
         phishingReport: phishingWrap || null,
       };
-
+      console.log(payload);
       await api.post("/emails/send-mail", payload);
       toast.success("Email sent");
     } catch (err) {

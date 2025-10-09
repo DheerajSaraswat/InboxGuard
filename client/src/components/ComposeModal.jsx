@@ -242,9 +242,10 @@ export default function ComposeModal({ open, setOpen, isDark }) {
         to: recipients,
         subject: subject,
         body: editor.getHTML(),
+        phishingReport: scanResult || undefined,
         attachments: files.map((f) => ({ name: f.name, size: f.size })),
       };
-      await axios.post("/api/emails/send", payload);
+      await axios.post("/api/emails/send-mail", payload);
       toast.success("Email sent");
       setShowAlert(false);
       setScanResult(null);
