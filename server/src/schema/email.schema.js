@@ -20,6 +20,7 @@ const EmailSchema = new Schema({
 
   subject: String,
   body: String,
+  bodyChecksum: String,
   attachments: [
     {
       fileName: String,

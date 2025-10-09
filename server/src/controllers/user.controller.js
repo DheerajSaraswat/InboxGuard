@@ -135,3 +135,15 @@ const getPublicKey = asyncHandler(async(req, res)=>{
 })
 
 export {userRegister, userRegisterWithGoogle, userLogin, storePublicKey, getPublicKey};
+// Save FCM token for push notifications
+export const saveFcmToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  const { user_id } = req.user;
+  if (!token) return res.status(400).json({ message: "token required" });
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) return res.status(404).json({ message: "User not found" });
+  user.securitySettings.notifications.fcmToken = token;
+  user.updatedAt = new Date();
+  await user.save();
+  res.json({ success: true });
+});

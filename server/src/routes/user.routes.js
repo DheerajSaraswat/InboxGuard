@@ -5,6 +5,7 @@ import {
   userLogin,
   userRegister,
   userRegisterWithGoogle,
+  saveFcmToken,
 } from "../controllers/user.controller.js";
 import { verifyAuth } from "../middlewares/verifyAuth.js";
 
@@ -15,5 +16,6 @@ router.route("/register-google").post(userRegisterWithGoogle);
 router.route("/login").post(verifyAuth , userLogin);
 router.route("/public-key").post(verifyAuth, storePublicKey);
 router.route("/crypto/public-key").get(verifyAuth, getPublicKey);
+router.route("/fcm-token").post(verifyAuth, saveFcmToken);
 
 export default router;
