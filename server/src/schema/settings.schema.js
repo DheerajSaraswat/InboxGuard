@@ -1,5 +1,4 @@
-import mongoose from "mongoose";
-import { Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const SystemSettingsSchema = new Schema({
   key: { type: String, unique: true },
@@ -9,6 +8,7 @@ const SystemSettingsSchema = new Schema({
   description: String,
   isPublic: Boolean,
   isUserConfigurable: Boolean,
+
   validation: {
     required: Boolean,
     min: Number,
@@ -16,8 +16,9 @@ const SystemSettingsSchema = new Schema({
     allowedValues: [String],
     pattern: String,
   },
+
   version: Number,
-  lastModifiedBy: String,
+  lastModifiedBy: { type: Schema.Types.ObjectId, ref: "User" },
   changeReason: String,
   previousValue: Schema.Types.Mixed,
   createdAt: { type: Date, default: Date.now },

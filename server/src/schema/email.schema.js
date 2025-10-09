@@ -1,21 +1,13 @@
-import mongoose from "mongoose";
-import { Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const EmailSchema = new Schema({
   messageId: { type: String, unique: true },
 
-  from: {
-    userId: String, // Firebase UID
-    email: String,
-    username: String,
-    publicKey: String,
-  },
+  from: { type: Schema.Types.ObjectId, ref: "User", required: true },
+
   to: [
     {
-      userId: String,
-      email: String,
-      username: String,
-      publicKey: String,
+      user: { type: Schema.Types.ObjectId, ref: "User", required: true },
       deliveryStatus: {
         type: String,
         enum: ["pending", "delivered", "failed"],
@@ -26,16 +18,15 @@ const EmailSchema = new Schema({
     },
   ],
 
-  // Encrypted Content
   subject: String,
   body: String,
+  bodyChecksum: String,
   attachments: [
     {
       fileName: String,
       fileSize: Number,
       mimeType: String,
-      cloudflareId: String, // Cloudflare R2 object ID
-      cloudflareUrl: String, // Signed URL reference
+      cloudinaryUrl: String,
       checksum: String,
     },
   ],
@@ -45,14 +36,13 @@ const EmailSchema = new Schema({
     keyExchange: { type: String, default: "RSA-2048" },
     encryptedKeys: [
       {
-        recipientId: String,
+        recipient: { type: Schema.Types.ObjectId, ref: "User" },
         encryptedAESKey: String,
         iv: String,
       },
     ],
   },
 
-  // Security
   securityAnalysis: {
     riskScore: Number,
     riskLevel: {
@@ -67,46 +57,27 @@ const EmailSchema = new Schema({
         detected: Boolean,
       },
     ],
-    analysisVersion: String,
     analyzedAt: Date,
     bypassedByUser: Boolean,
-    bypassReason: String,
   },
 
-  // Metadata
+  threadId: { type: String }, // for grouping emails
+  mailbox: {
+    type: String,
+    enum: ["inbox", "sent", "spam", "trash"],
+    default: "inbox",
+  },
+
   status: {
     type: String,
     enum: ["draft", "sent", "delivered", "failed", "blocked"],
     default: "sent",
   },
-  priority: {
-    type: String,
-    enum: ["low", "normal", "high"],
-    default: "normal",
-  },
-  isStarred: { type: Boolean, default: false },
-  isArchived: { type: Boolean, default: false },
-  isDeleted: { type: Boolean, default: false },
-  deletedAt: Date,
 
   createdAt: { type: Date, default: Date.now },
-  sentAt: Date,
-  deliveredAt: Date,
-  updatedAt: { type: Date, default: Date.now },
-
-  threadId: String,
-  inReplyTo: String,
-  references: [String],
-
-  labels: [String],
-  folder: { type: String, default: "inbox" },
-
-  sizeBytes: Number,
-  processingTime: Number,
 });
 
-EmailSchema.index({ subject: "text", "from.username": "text" });
-EmailSchema.index({ "to.userId": 1, createdAt: -1 });
-EmailSchema.index({ folder: 1, isDeleted: 1 });
+EmailSchema.index({ "to.user": 1 });
+EmailSchema.index({ from: 1 });
 
-export const Email = mongoose.model("Email",EmailSchema);
+export const Email = mongoose.model("Email", EmailSchema);
