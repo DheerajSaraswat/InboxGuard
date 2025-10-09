@@ -1,15 +1,14 @@
-import mongoose from "mongoose";
-import { Schema } from "mongoose";
-
+import mongoose, { Schema } from "mongoose";
 
 const ThreatIntelligenceSchema = new Schema({
-  threatType: String,
+  threatType: String, // e.g. "domain", "url", "ip", "hash"
   value: String,
   valueHash: String,
   severity: String,
   confidence: Number,
   description: String,
   category: String,
+
   sources: [
     {
       name: String,
@@ -18,16 +17,21 @@ const ThreatIntelligenceSchema = new Schema({
       url: String,
     },
   ],
+
   statistics: {
     detectionCount: Number,
     lastSeen: Date,
     firstSeen: Date,
     affectedUsers: Number,
   },
+
   isActive: { type: Boolean, default: true },
   expiresAt: Date,
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const ThreatIntelligence = mongoose.model("ThreatIntelligence", ThreatIntelligenceSchema)
+export const ThreatIntelligence = mongoose.model(
+  "ThreatIntelligence",
+  ThreatIntelligenceSchema
+);

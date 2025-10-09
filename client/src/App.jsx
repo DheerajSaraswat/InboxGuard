@@ -1,60 +1,52 @@
-import { createContext, useEffect, useState } from "react";
-import HomePage from "./pages/HomePage";
-import SigninPage from "./pages/Authentication/SigninPage";
-import SignupPage from "./pages/Authentication/SignupPage";
+import HomePage from "./pages/HomePage.jsx";
+import SigninPage from "./pages/Authentication/SigninPage.jsx";
+import SignupPage from "./pages/Authentication/SignupPage.jsx";
 import { Routes, Route } from "react-router-dom";
-import { lookInSession } from "./common/session";
-import ForgotPasswordPage from "./pages/Authentication/ForgotPasswordPage";
-import Dashboard from "./pages/dashboard";
+import DraftsPage from "./pages/DraftsPage.jsx";
+import ForgotPasswordPage from "./pages/Authentication/ForgotPasswordPage.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
 import AnimationWrapper from "./common/AnimationWrapper.jsx";
 import VerifyEmailPage from "./pages/Authentication/VerifyEmailPage.jsx";
-
-
-export const ThemeContext = createContext({});
-
-const darkTheme = () =>
-  window.matchMedia("(prefers-color-scheme: dark)").matches;
+import Compose from "./pages/Compose.jsx";
+import { useSelector } from "react-redux";
 
 function App() {
-  const [userAuth, setUserAuth] = useState("");
-  const [theme, setTheme] = useState(() => (darkTheme() ? "dark" : "light"));
-  useEffect(() => {
-    const userInSession = lookInSession("user");
-    const themeInSession = lookInSession("theme");
-    userInSession
-      ? setUserAuth(JSON.parse(userInSession))
-      : setUserAuth({ access_token: null });
-    themeInSession
-      ? setTheme(() => {
-          document.body.setAttribute("data-theme", themeInSession);
-          return themeInSession;
-        })
-      : document.body.setAttribute("data-theme", theme);
-  }, []);
+  const theme = useSelector((state) => state.theme.mode);
+  const isDark = theme === "dark";
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/signin" element={
+    <div className={isDark ? "dark" : ""}>
+      <Routes>
+        <Route path="/" element={<HomePage isDark={isDark} />} />
+        <Route
+          path="/signin"
+          element={
             <AnimationWrapper>
-               <SigninPage />
+              <SigninPage isDark={isDark} />
             </AnimationWrapper>
-           } />
-          <Route path="/signup" element={
+          }
+        />
+        <Route
+          path="/signup"
+          element={
             <AnimationWrapper>
-            <SignupPage />
+              <SignupPage isDark={isDark} />
             </AnimationWrapper>
-            } />
-          <Route path="/verify-email" element={
-             <VerifyEmailPage />
-          } />
-          <Route path="/reset-password" element={
-            <ForgotPasswordPage />
-          } />
-          <Route path="/dashboard" element={<Dashboard/>}/>
-        </Routes>
-    </ThemeContext.Provider>
+          }
+        />
+        <Route
+          path="/verify-email"
+          element={<VerifyEmailPage isDark={isDark} />}
+        />
+        <Route
+          path="/reset-password"
+          element={<ForgotPasswordPage isDark={isDark} />}
+        />
+        <Route path="/user/u0" element={<Dashboard isDark={isDark} />}/>
+          <Route path="/user/u0/compose" element={<Compose isDark={isDark}/>} />
+        <Route path="/drafts" element={<DraftsPage />} />
+      </Routes>
+    </div>
   );
 }
 

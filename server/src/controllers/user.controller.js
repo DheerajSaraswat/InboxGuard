@@ -104,4 +104,46 @@ const userLogin = asyncHandler(async(req, res)=>{
   }
 })
 
-export {userRegister, userRegisterWithGoogle, userLogin};
+const storePublicKey = asyncHandler(async(req,res)=>{
+  const {publicKey} = req.body
+  const {user_id} = req.user
+  
+  if(!publicKey){
+    throw new ApiError(400, "Public key is required.")
+  }
+  const user = await User.findOne({firebaseUid: user_id})
+  if(!user){
+    throw new ApiError(404, "User not found.")
+  }
+  user.securitySettings.encryption.publicKey = publicKey;
+  user.securitySettings.encryption.keyGeneratedAt = new Date();
+  await user.save();
+  res.status(200).json(new ApiResponse(200, null, "Public key stored successfully."))
+})
+
+const getPublicKey = asyncHandler(async(req, res)=>{
+  const {user_id} = req.user
+  const user = await User.findOne({firebaseUid: user_id})
+  if(!user){
+    throw new ApiError(404, "User not found.")
+  }
+  const publicKey = user.securitySettings.encryption.publicKey;
+  if(!publicKey){
+    throw new ApiError(404, "Public key not found. Please generate one first.")
+  }
+  res.status(200).json(new ApiResponse(200, {publicKey}, "Public key fetched successfully."))
+})
+
+export {userRegister, userRegisterWithGoogle, userLogin, storePublicKey, getPublicKey};
+// Save FCM token for push notifications
+export const saveFcmToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  const { user_id } = req.user;
+  if (!token) return res.status(400).json({ message: "token required" });
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) return res.status(404).json({ message: "User not found" });
+  user.securitySettings.notifications.fcmToken = token;
+  user.updatedAt = new Date();
+  await user.save();
+  res.json({ success: true });
+});
