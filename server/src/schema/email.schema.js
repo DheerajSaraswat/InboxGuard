@@ -1,7 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
 const EmailSchema = new Schema({
-  messageId: { type: String, unique: true },
+  messageId: { type: String, unique: true, sparse: true },
 
   from: { type: Schema.Types.ObjectId, ref: "User", required: true },
 

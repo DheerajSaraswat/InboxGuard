@@ -3,7 +3,6 @@ import api from "../utils/api"
 export const showEmailLists = async () => {
     try {
         const res = await api.get("/emails/emailList");
-        console.log(res.data);
         return res.data?.emails || [];
     } catch (error) {
         console.error("Error fetching email lists:", error);
