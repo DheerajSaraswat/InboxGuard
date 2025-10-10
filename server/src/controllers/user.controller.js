@@ -6,9 +6,8 @@ import admin from "../config/firebaseAdmin.js";
 
 const userRegister = asyncHandler(async (req, res) => {
   const { uid, email, photoURL } = req.body;
-console.log(req.user);
-  if (!uid || !email) {
-    throw new ApiError(400, "UID and Email are required");
+  if (!uid) {
+    throw new ApiError(400, "UID is required");
   }
 
   // Fetch latest user record from Firebase Auth
@@ -21,10 +20,12 @@ console.log(req.user);
   const initial = email.charAt(0);
   const defaultImage = `https://api.dicebear.com/9.x/initials/svg?seed=${initial}`;
 
+  const customEmail = username + "@inboxguard.live";
+
   // Create new user in MongoDB
   const newUser = await User.create({
     firebaseUid: uid,
-    email,
+    email: customEmail,
     username,
     displayImage: photoURL || firebaseUser.photoURL || defaultImage,
     emailVerified: firebaseUser.emailVerified, // ✅ synced from Firebase
@@ -64,10 +65,12 @@ const userRegisterWithGoogle = asyncHandler(async(req, res)=>{
     const initial = email.charAt(0);
     const defaultImage = `https://api.dicebear.com/9.x/initials/svg?seed=${initial}`;
 
+    const customEmail = username + "@inboxguard.live";
+
     // Create new user in MongoDB
     const newUser = await User.create({
       firebaseUid: uid,
-      email,
+      email: customEmail,
       username,
       displayImage: photoURL || firebaseUser.photoURL || defaultImage,
       emailVerified: firebaseUser.emailVerified, // ✅ synced from Firebase
@@ -134,9 +137,8 @@ const getPublicKey = asyncHandler(async(req, res)=>{
   res.status(200).json(new ApiResponse(200, {publicKey}, "Public key fetched successfully."))
 })
 
-export {userRegister, userRegisterWithGoogle, userLogin, storePublicKey, getPublicKey};
 // Save FCM token for push notifications
-export const saveFcmToken = asyncHandler(async (req, res) => {
+const saveFcmToken = asyncHandler(async (req, res) => {
   const { token } = req.body;
   const { user_id } = req.user;
   if (!token) return res.status(400).json({ message: "token required" });
@@ -147,3 +149,5 @@ export const saveFcmToken = asyncHandler(async (req, res) => {
   await user.save();
   res.json({ success: true });
 });
+
+export {userRegister, userRegisterWithGoogle, userLogin, storePublicKey, getPublicKey, saveFcmToken};
