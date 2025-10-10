@@ -40,7 +40,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Blockquote from "@tiptap/extension-blockquote";
 
 const EmailEditor = ({ isDark }) => {
-  const [recipients, setRecipients] = useState(["recipient@example.com"]);
+  const [recipients, setRecipients] = useState(["example@inboxguard.live"]);
   const [subject, setSubject] = useState("");
   const [emailContent, setEmailContent] = useState("");
   const [attachedFiles, setAttachedFiles] = useState([]);

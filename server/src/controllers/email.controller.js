@@ -2,7 +2,7 @@ import { Email } from "../schema/email.schema.js";
 import { User } from "../schema/user.schema.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import crypto from "crypto";
-import { sendMailViaMailgun } from "../utils/Mailgun.js";
+import { sendMailViaMailgun } from "../utils/MailGun.js";
 import admin from "../config/firebaseAdmin.js";
 import { encryptText } from "../utils/encryption.js";
 
@@ -15,13 +15,11 @@ const sendEmail = asyncHandler(async (req, res) => {
       .status(400)
       .json({ message: "To (array) and subject are required." });
   }
-
   // Resolve sender
   const fromUser = await User.findOne({ firebaseUid: user_id });
   if (!fromUser) {
     return res.status(404).json({ message: "Sender not found" });
   }
-
   // Resolve recipients by email string -> User
   const recipientUsers = await User.find({ email: { $in: to } });
   if (recipientUsers.length !== to.length) {
@@ -71,7 +69,7 @@ const sendEmail = asyncHandler(async (req, res) => {
   try {
     const plainTextFallback = "This message is encrypted at rest in InboxGuard.";
     await sendMailViaMailgun({
-      from: senderEmail || process.env.MAILGUN_FROM_EMAIL,
+      from:  process.env.MAILGUN_FROM_EMAIL,
       to,
       subject,
       text: plainTextFallback,
@@ -106,15 +104,19 @@ const sendEmail = asyncHandler(async (req, res) => {
 
 const showEmailList = asyncHandler(async(req, res)=>{
   const { user_id } = req.user;
-  console.log(user_id);
   const user = await User.findOne({ firebaseUid: user_id });
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
-  const emails = await Email.find({ "to.user": user._id })
-    .populate("from", "email username")
-    .sort({ createdAt: -1 });
-  return res.status(200).json({ success: true, emails });
+  try {
+    const emails = await Email.find({ "to.user": user._id })
+      ?.populate("from", "email username")
+      .sort({ createdAt: -1 });
+    return res.status(200).json({ success: true, emails });
+  } catch (error) {
+    console.log(error);
+    throw error
+  }
 })
 
 export { sendEmail, showEmailList };
