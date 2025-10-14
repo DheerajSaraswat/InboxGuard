@@ -1,11 +1,11 @@
 import api from "../utils/api"
 
-export const registerUser = async(user)=>{
+export const registerUser = async(user, displayName)=>{
     try {
         const res = await api.post("/users/register",{
             uid: user.uid,
             email: user.email,
-            displayName: user.displayName,
+            fullname: displayName,
             photoURL: user.photoURL
         });
         return res;

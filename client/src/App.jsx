@@ -4,10 +4,11 @@ import SignupPage from "./pages/Authentication/SignupPage.jsx";
 import { Routes, Route } from "react-router-dom";
 import DraftsPage from "./pages/DraftsPage.jsx";
 import ForgotPasswordPage from "./pages/Authentication/ForgotPasswordPage.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
+import Dashboard from "./pages/dashboard.jsx";
 import AnimationWrapper from "./common/AnimationWrapper.jsx";
 import VerifyEmailPage from "./pages/Authentication/VerifyEmailPage.jsx";
 import Compose from "./pages/Compose.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
 import { useSelector } from "react-redux";
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
         />
         <Route path="/user/u0" element={<Dashboard isDark={isDark} />}/>
           <Route path="/user/u0/compose" element={<Compose isDark={isDark}/>} />
+        <Route path="/user/u0/profile" element={<ProfilePage isDark={isDark} />} />
         <Route path="/drafts" element={<DraftsPage />} />
       </Routes>
     </div>

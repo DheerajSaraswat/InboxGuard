@@ -5,7 +5,6 @@ export const registerUserWithGoogle = async (user) => {
     const res = await api.post("/users/register-google", {
       uid: user.uid,
       email: user.email,
-      displayName: user.displayName,
       photoURL: user.photoURL,
     });
     return res;

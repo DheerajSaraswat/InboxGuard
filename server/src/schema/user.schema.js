@@ -3,7 +3,11 @@ import mongoose, { Schema } from "mongoose";
 const UserSchema = new Schema({
   firebaseUid: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
-  username: { type: String, required: true },
+  platformMail: { type: String, unique: true },
+  username: { type: String, required: true, unique: true },
+  fullname: { type: String, default: "John Doe" },
+  bio: { type: String, default: "Your bio...." },
+
   displayImage: {
     type: String,
     default: function () {
@@ -12,6 +16,8 @@ const UserSchema = new Schema({
       )}`;
     },
   },
+
+  publicId: { type: String, default: null },//to delete images from cloudinary
 
   accountType: {
     type: String,

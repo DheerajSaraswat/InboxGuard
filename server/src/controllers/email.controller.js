@@ -2,13 +2,12 @@ import { Email } from "../schema/email.schema.js";
 import { User } from "../schema/user.schema.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import crypto from "crypto";
-import { sendMailViaMailgun } from "../utils/MailGun.js";
 import admin from "../config/firebaseAdmin.js";
-import { encryptText } from "../utils/encryption.js";
+import { encryptText, decryptText } from "../utils/encryption.js";
 
 const sendEmail = asyncHandler(async (req, res) => {
   const { user_id, email: senderEmail } = req.user;
-  const { to, subject, encryptedBody, body, attachments = [], phishingReport } = req.body;
+  const { to, subject, body, attachments = [], phishingReport } = req.body;
 
   if (!Array.isArray(to) || !subject) {
     return res
@@ -31,10 +30,10 @@ const sendEmail = asyncHandler(async (req, res) => {
 
   const toArray = recipientUsers.map((u) => ({ user: u._id }));
 
-  // Compute checksums
-  const bodyCipherB64 = encryptedBody?.cipherB64 || (body ? encryptText(body) : "");
+  // Encrypt email body
+  const bodyCipherB64 = body ? encryptText(body) : "";
   if (!bodyCipherB64) {
-    return res.status(400).json({ message: "Missing body or encryptedBody.cipherB64" });
+    return res.status(400).json({ message: "Email body is required" });
   }
   const bodyChecksum = crypto
     .createHash("sha256")
@@ -52,7 +51,7 @@ const sendEmail = asyncHandler(async (req, res) => {
     return { fileName, fileSize, mimeType, cloudinaryUrl, checksum };
   });
 
-  // Persist email
+  // Persist email in sender's sent folder
   const emailDoc = await Email.create({
     from: fromUser._id,
     to: toArray,
@@ -65,18 +64,19 @@ const sendEmail = asyncHandler(async (req, res) => {
     status: "sent",
   });
 
-  // Attempt delivery via Mailgun
-  try {
-    const plainTextFallback = "This message is encrypted at rest in InboxGuard.";
-    await sendMailViaMailgun({
-      from:  process.env.MAILGUN_FROM_EMAIL,
-      to,
+  // Create copies for each recipient in their inbox
+  for (const recipient of recipientUsers) {
+    await Email.create({
+      from: fromUser._id,
+      to: [{ user: recipient._id, deliveryStatus: "delivered" }],
       subject,
-      text: plainTextFallback,
-      html: `<p>${plainTextFallback}</p>`,
+      body: bodyCipherB64,
+      bodyChecksum,
+      attachments: mappedAttachments,
+      securityAnalysis: phishingReport || undefined,
+      mailbox: "inbox",
+      status: "delivered",
     });
-  } catch (err) {
-    console.error("Mailgun send failed:", err.message);
   }
 
   // Notify recipients via FCM if token exists
@@ -104,13 +104,27 @@ const sendEmail = asyncHandler(async (req, res) => {
 
 const showEmailList = asyncHandler(async(req, res)=>{
   const { user_id } = req.user;
+  const { mailbox = "inbox" } = req.query;
   const user = await User.findOne({ firebaseUid: user_id });
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
   try {
-    const emails = await Email.find({ "to.user": user._id })
-      ?.populate("from", "email username")
+    let query = {};
+    if (mailbox === "inbox") {
+      query = { "to.user": user._id, mailbox: "inbox" };
+    } else if (mailbox === "sent") {
+      query = { from: user._id, mailbox: "sent" };
+    } else {
+      query = { $or: [
+        { "to.user": user._id, mailbox: "inbox" },
+        { from: user._id, mailbox: "sent" }
+      ]};
+    }
+    
+    const emails = await Email.find(query)
+      .populate("from", "email username displayImage")
+      .populate("to.user", "email username displayImage")
       .sort({ createdAt: -1 });
     return res.status(200).json({ success: true, emails });
   } catch (error) {
@@ -119,4 +133,40 @@ const showEmailList = asyncHandler(async(req, res)=>{
   }
 })
 
-export { sendEmail, showEmailList };
+const getEmailById = asyncHandler(async(req, res)=>{
+  const { user_id } = req.user;
+  const { id } = req.params;
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  try {
+    const email = await Email.findOne({
+      _id: id,
+      $or: [
+        { "to.user": user._id },
+        { from: user._id }
+      ]
+    })
+    .populate("from", "email username displayImage")
+    .populate("to.user", "email username displayImage");
+    
+    if (!email) {
+      return res.status(404).json({ message: "Email not found" });
+    }
+    
+    // Decrypt email body
+    const decryptedBody = decryptText(email.body);
+    const emailWithDecryptedBody = {
+      ...email.toObject(),
+      body: decryptedBody
+    };
+    
+    return res.status(200).json({ success: true, email: emailWithDecryptedBody });
+  } catch (error) {
+    console.log(error);
+    throw error
+  }
+})
+
+export { sendEmail, showEmailList, getEmailById };

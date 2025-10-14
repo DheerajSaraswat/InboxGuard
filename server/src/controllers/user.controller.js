@@ -3,9 +3,11 @@ import {ApiError} from "../utils/ApiError.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
 import {User} from "../schema/user.schema.js"
 import admin from "../config/firebaseAdmin.js";
+import {v2 as cloudinary} from "cloudinary";
+import {uploadOnCloudinary} from "../utils/cloudinary.js"
 
 const userRegister = asyncHandler(async (req, res) => {
-  const { uid, email, photoURL } = req.body;
+  const { uid, email, fullname, photoURL } = req.body;
   if (!uid) {
     throw new ApiError(400, "UID is required");
   }
@@ -25,8 +27,10 @@ const userRegister = asyncHandler(async (req, res) => {
   // Create new user in MongoDB
   const newUser = await User.create({
     firebaseUid: uid,
-    email: customEmail,
+    email,
+    platformMail: customEmail,
     username,
+    fullname,
     displayImage: photoURL || firebaseUser.photoURL || defaultImage,
     emailVerified: firebaseUser.emailVerified, // ✅ synced from Firebase
     isActive: true,
@@ -40,13 +44,15 @@ const userRegister = asyncHandler(async (req, res) => {
 });
 
 const userRegisterWithGoogle = asyncHandler(async(req, res)=>{
-  const {uid, email, displayName, photoURL} = req.body;
+  const {uid, email, photoURL} = req.body;
   
   const userExist = await User.findOne({email}) 
   if(userExist){
+    console.log("Esist");
     const existedUser = {
       firebaseUid: userExist.firebaseUid,
       email: userExist.email,
+      platformMail: userExist.platformMail,
       username: userExist.username,
       displayImage: userExist.displayImage,
       emailVerified: userExist.emailVerified,
@@ -70,7 +76,8 @@ const userRegisterWithGoogle = asyncHandler(async(req, res)=>{
     // Create new user in MongoDB
     const newUser = await User.create({
       firebaseUid: uid,
-      email: customEmail,
+      email,
+      platformMail: customEmail,
       username,
       displayImage: photoURL || firebaseUser.photoURL || defaultImage,
       emailVerified: firebaseUser.emailVerified, // ✅ synced from Firebase
@@ -137,6 +144,106 @@ const getPublicKey = asyncHandler(async(req, res)=>{
   res.status(200).json(new ApiResponse(200, {publicKey}, "Public key fetched successfully."))
 })
 
+// Get user profile
+const getUserProfile = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+  const user = await User.findOne({ firebaseUid: user_id }).select('fullname displayImage bio email username platformMail');
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+  return res.status(200).json(new ApiResponse(200, user, "User profile fetched successfully."));
+});
+
+// Update user profile
+const updateUserProfile = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+  const {username, fullname, bio} = req.body;
+  
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+  
+  let payload = {};
+  
+  if (username !== undefined && username !== user.username) {
+    
+    const existingUsername = await User.findOne({username: username.trim()});
+    if(existingUsername){
+      throw new ApiError(400, "Username already taken.");
+    }
+
+    payload.username = username.trim();
+    payload.platformMail = username.trim() + "@inboxguard.live"
+
+  }
+
+  if(fullname !== undefined && fullname !== user.fullname){
+    payload.fullname = fullname.trim();
+  }
+
+  if(bio!==undefined && bio !== user.bio){
+    payload.bio = bio.trim();
+  }
+
+  if (Object.keys(payload).length === 0) {
+    throw new ApiError(400, "No changes detected.");
+  }
+
+  const updatedUser = await User.findOneAndUpdate(
+    { firebaseUid: user_id },
+    { $set: payload, updatedAt: new Date() },
+    { new: true }
+  );
+
+  if (!updatedUser) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedUser, "Profile updated successfully."));
+});
+
+// Update security settings
+const updateSecuritySettings = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+  const { phishingDetection, notifications } = req.body;
+  
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  // Update phishing detection settings
+  if (phishingDetection) {
+    if (phishingDetection.enabled !== undefined) {
+      user.securitySettings.phishingDetection.enabled = phishingDetection.enabled;
+    }
+    if (phishingDetection.sensitivity) {
+      user.securitySettings.phishingDetection.sensitivity = phishingDetection.sensitivity;
+    }
+  }
+
+  // Update notification settings
+  if (notifications) {
+    if (notifications.phishingAlerts !== undefined) {
+      user.securitySettings.notifications.phishingAlerts = notifications.phishingAlerts;
+    }
+    if (notifications.emailNotifications !== undefined) {
+      user.securitySettings.notifications.emailNotifications = notifications.emailNotifications;
+    }
+    if (notifications.desktopNotifications !== undefined) {
+      user.securitySettings.notifications.desktopNotifications = notifications.desktopNotifications;
+    }
+  }
+
+  user.updatedAt = new Date();
+  await user.save();
+
+  res.status(200).json(new ApiResponse(200, user.securitySettings, "Security settings updated successfully."));
+});
+
 // Save FCM token for push notifications
 const saveFcmToken = asyncHandler(async (req, res) => {
   const { token } = req.body;
@@ -150,4 +257,54 @@ const saveFcmToken = asyncHandler(async (req, res) => {
   res.json({ success: true });
 });
 
-export {userRegister, userRegisterWithGoogle, userLogin, storePublicKey, getPublicKey, saveFcmToken};
+// Upload profile image
+const uploadProfileImage = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+
+  if (!req.file) {
+    throw new ApiError(400, "No image file provided.");
+  }
+
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  // Delete old image if it exists and isn't a default avatar
+  if (
+    user.publicId &&
+    !user.displayImage.includes("api.dicebear.com") &&
+    !user.displayImage.includes("firebase")
+  ) {
+    try {
+      await cloudinary.uploader.destroy(user.publicId);
+      console.log("Old image deleted from Cloudinary");
+    } catch (error) {
+      console.log("Error deleting old image:", error.message);
+    }
+  }
+
+  // Upload new image
+  const uploadResponse = await uploadOnCloudinary(req.file.path);
+  if (!uploadResponse) {
+    throw new ApiError(500, "Failed to upload image to Cloudinary.");
+  }
+
+  // Update user info
+  user.displayImage = uploadResponse.secure_url;
+  user.publicId = uploadResponse.public_id;
+  user.updatedAt = new Date();
+  await user.save();
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { displayImage: user.displayImage },
+        "Profile image uploaded successfully."
+      )
+    );
+});
+
+export {userRegister, userRegisterWithGoogle, userLogin, storePublicKey, getPublicKey, getUserProfile, updateUserProfile, updateSecuritySettings, saveFcmToken, uploadProfileImage};

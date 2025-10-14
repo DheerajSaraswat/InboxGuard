@@ -13,14 +13,12 @@ import {
   Settings,
 } from "lucide-react";
 import logo from "../assets/LightThemeLogo.png";
-import ComposeModal from "./ComposeModal.jsx";
 import { Link } from "react-router-dom";
 
 
 
 export default function Sidebar({ isDark }) {
   const [open, setOpen] = useState(false);
-  const [openComposeModal, setOpenComposeModal] = useState(false);
   const draftCount = useSelector(state => state.draft.drafts.length);
   const navigate = useNavigate();
 
@@ -174,7 +172,6 @@ export default function Sidebar({ isDark }) {
           aria-label="Close sidebar overlay"
         />
       )}
-      <ComposeModal open={openComposeModal} setOpen={setOpenComposeModal} isDark={isDark}/>
     </>
   );
 }

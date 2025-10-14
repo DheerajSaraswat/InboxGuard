@@ -105,6 +105,7 @@ const SigninPage = ({ isDark }) => {
     try {
       setLoading(true);
       const user = await googleAuth(rememberMe);
+      console.log(user);
       const res = await registerUserWithGoogle(user);
       await initializeUserKeys(res.data.data.firebaseUid);
       dispatch(sliceLogin({user:res.data.data, token:user.accessToken}))

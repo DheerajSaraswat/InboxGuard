@@ -62,8 +62,8 @@ const SignupPage = ({ isDark }) => {
     try {
       setLoading(true);
       const user = await register(email, password);
-      await registerUser(user);      
-      toast.success("Signed up successfully!");
+      const displayName = firstName + " " + lastName
+      await registerUser(user, displayName);      
       navigate("/verify-email");
     } catch (error) {
       toast.error("Failed to sign up. Please try again.");
