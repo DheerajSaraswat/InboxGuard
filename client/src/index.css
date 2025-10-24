@@ -138,3 +138,34 @@
 .animate-slideOutRight {
   animation: slideOutRight 0.3s ease-in forwards;
 }
+
+/* Gmail-style popup animations */
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(100%) translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToBottom {
+  from {
+    transform: translateY(0) translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%) translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-slideInFromBottom {
+  animation: slideInFromBottom 0.3s ease-out forwards;
+}
+
+.animate-slideOutToBottom {
+  animation: slideOutToBottom 0.3s ease-in forwards;
+}

@@ -11,6 +11,7 @@ import VerifyEmailPage from "./pages/Authentication/VerifyEmailPage.jsx";
 import Compose from "./pages/Compose.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
+import TrashPage from "./pages/TrashPage.jsx";
 import { useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 import { onMessageListener, requestForToken } from "./common/firebase.jsx";
@@ -92,11 +93,13 @@ function App() {
           element={<ForgotPasswordPage isDark={isDark} />}
         />
         <Route path="/user/u0" element={<Dashboard isDark={isDark} />}/>
+        <Route path="/user/u0/dashboard" element={<Dashboard isDark={isDark} />}/>
         <Route path="/user/u0/compose" element={<Compose isDark={isDark}/>} />
         <Route path="/user/u0/email/:id" element={<EmailViewer isDark={isDark} />} />
         <Route path="/user/u0/profile" element={<ProfilePage isDark={isDark} />} />
         <Route path="/user/u0/settings" element={<SettingsPage isDark={isDark} />} />
         <Route path="/drafts" element={<DraftsPage />} />
+        <Route path="/trash" element={<TrashPage isDark={isDark} />} />
       </Routes>
     </div>
   );

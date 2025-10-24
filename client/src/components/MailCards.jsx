@@ -1,16 +1,25 @@
 import React from "react";
 
-export default function MailCards({ isDark, emails = [], setSelectedEmail }) {
+export default function MailCards({ isDark, emails = [], setSelectedEmail, isTrashMode = false, selectedEmails = [], onSelectEmail }) {
   return (
     <div className={`flex flex-col gap-8 py-8 px-8 ${isDark ? 'bg-transparent' : 'bg-[#F3F6FA]'}`}>
       {emails.map(email => (
         <div
           key={email._id}
-          className={`rounded-3xl flex p-4 px-10 cursor-pointer transition-all duration-200 shadow-2xl hover:scale-[1.01] border-2 ${isDark ? 'bg-gradient-to-br from-[#232326]/90 via-[#18181b]/90 to-[#232326]/80 border-[#232326]' : 'bg-white border-[#e5e7eb] '}`}
+          className={`rounded-3xl flex p-4 px-10 cursor-pointer transition-all duration-200 shadow-2xl hover:scale-[1.01] border-2 ${isDark ? 'bg-gradient-to-br from-[#232326]/90 via-[#18181b]/90 to-[#232326]/80 border-[#232326]' : 'bg-white border-[#e5e7eb] '} ${selectedEmails.includes(email._id) ? 'ring-2 ring-blue-500' : ''}`}
         
-          onClick={() => setSelectedEmail(email)}
+          onClick={() => isTrashMode ? onSelectEmail(email._id) : setSelectedEmail(email)}
         >
           <div className={`flex items-center gap-4`}>
+            {isTrashMode && (
+              <input
+                type="checkbox"
+                checked={selectedEmails.includes(email._id)}
+                onChange={() => onSelectEmail(email._id)}
+                className="w-4 h-4"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
             <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold relative ${isDark ? 'bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-blue-200 ' : 'bg-blue-300 text-white'} text-xl`}>
               {(email.from?.email || "?")[0].toUpperCase()}
               {isDark && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full " />}

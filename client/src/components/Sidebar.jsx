@@ -155,6 +155,7 @@ export default function Sidebar({ isDark }) {
                   ? "hover:bg-[#232326]/80 text-[#f3f4f6]"
                   : "hover:bg-[#f3f4f6] text-[#111]"
               } transition`}
+              onClick={() => navigate('/trash')}
             >
               <Trash2 className="w-4 h-4" /> Trash
             </button>
