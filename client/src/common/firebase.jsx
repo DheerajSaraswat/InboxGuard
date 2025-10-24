@@ -13,20 +13,23 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
 } from "firebase/auth";
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import toast from "react-hot-toast";
+import api from "../utils/api";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_APIKEY,
   authDomain: "inboxguard-2b71a.firebaseapp.com",
-  projectId: "inboxguard-2b71a",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECTID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: "349315151933",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGINGID,
   appId: import.meta.env.VITE_FIREBASE_APPID,
   measurementId: "G-QZJ1NBGDYB",
 };
 
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+const messaging = getMessaging(app)
 
 const provider = new GoogleAuthProvider();
 
@@ -143,3 +146,38 @@ export const logout = async () => {
     throw error;
   }
 };
+
+export const requestForToken = async()=>{
+  try {
+    const permission = await Notification.requestPermission();
+    if(permission === "granted"){
+      const currentToken = await getToken(messaging, {
+        vapidKey: import.meta.env.VITE_FIREBASE_VAPIDKEY,
+      });
+      if(currentToken){
+        console.log("FCM Token: ", currentToken);
+        await api.post("/users/update-fcm-token",{
+          token: currentToken
+        })
+        return currentToken
+      } else {
+        console.warn("No registration token available. Request permission.");
+      }
+    } else {
+      console.warn("Notification permission denied.");
+    }
+  } catch (error) {
+    console.error("An error occurred while retreiving token: ", error);
+  }
+}
+
+export const onMessageListener = () =>
+  new Promise((resolve) => {
+    // This listener fires when the user is actively using your website.
+    onMessage(messaging, (payload) => {
+      console.log("Foreground Message Received:", payload);
+      // Manually handle the display (e.g., show a toast or an in-app banner)
+      // The browser's native notification will NOT show in the foreground.
+      resolve(payload);
+    });
+  });

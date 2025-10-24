@@ -40,7 +40,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Blockquote from "@tiptap/extension-blockquote";
 
 const EmailEditor = ({ isDark }) => {
-  const [recipients, setRecipients] = useState(["example@inboxguard.live"]);
+  const [recipients, setRecipients] = useState([]);
   const [subject, setSubject] = useState("");
   const [emailContent, setEmailContent] = useState("");
   const [attachedFiles, setAttachedFiles] = useState([]);
@@ -296,21 +296,46 @@ const EmailEditor = ({ isDark }) => {
         subject,
         htmlBody,
         attachments: attachedFiles,
+        recipients,
       });
 
       const payload = {
         to: recipients,
         subject: encrypted.subject,
-        encryptedBody: encrypted.encryptedBody,
+        // send plaintext HTML body to server; server encrypts at rest
+        body: htmlBody,
         attachments: encrypted.attachments,
-        phishingReport: phishingWrap || null,
+        encryptedKeys: encrypted.encryptedKeys,
+        phishingReport: phishingWrap?.phishingReport || null,
       };
       console.log(payload);
-      await api.post("/emails/send-mail", payload);
+      const { data } = await api.post("/emails/sendMail", payload);
       toast.success("Email sent");
+      if (Array.isArray(data?.missingRecipients) && data.missingRecipients.length) {
+        toast((t) => (
+          <div>
+            <div className="font-semibold">Some recipients were not found:</div>
+            <div className="text-sm mt-1">{data.missingRecipients.join(", ")}</div>
+          </div>
+        ));
+      }
     } catch (err) {
       console.error(err);
-      toast.error("Failed to send email");
+      const serverMsg = err?.response?.data?.message;
+      const missing = err?.response?.data?.missing;
+      if (serverMsg) {
+        toast.error(serverMsg);
+        if (Array.isArray(missing) && missing.length) {
+          toast((t) => (
+            <div>
+              <div className="font-semibold">Missing recipients:</div>
+              <div className="text-sm mt-1">{missing.join(", ")}</div>
+            </div>
+          ));
+        }
+      } else {
+        toast.error("Failed to send email");
+      }
     }
   };
 

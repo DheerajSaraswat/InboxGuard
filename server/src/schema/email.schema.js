@@ -27,6 +27,7 @@ const EmailSchema = new Schema({
       fileSize: Number,
       mimeType: String,
       cloudinaryUrl: String,
+      ivB64: String,
       checksum: String,
     },
   ],
@@ -37,6 +38,7 @@ const EmailSchema = new Schema({
     encryptedKeys: [
       {
         recipient: { type: Schema.Types.ObjectId, ref: "User" },
+        email: String,
         encryptedAESKey: String,
         iv: String,
       },

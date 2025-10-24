@@ -48,7 +48,6 @@ const userRegisterWithGoogle = asyncHandler(async(req, res)=>{
   
   const userExist = await User.findOne({email}) 
   if(userExist){
-    console.log("Esist");
     const existedUser = {
       firebaseUid: userExist.firebaseUid,
       email: userExist.email,
@@ -208,11 +207,27 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 // Update security settings
 const updateSecuritySettings = asyncHandler(async (req, res) => {
   const { user_id } = req.user;
-  const { phishingDetection, notifications } = req.body;
+  const { phishingDetection, notifications, encryption, blacklist, whitelist, storage } = req.body;
   
   const user = await User.findOne({ firebaseUid: user_id });
   if (!user) {
     throw new ApiError(404, "User not found.");
+  }
+
+  // Guard rails: Disallow changes to algorithms or non-user-configurable fields
+  if (encryption !== undefined || blacklist !== undefined || whitelist !== undefined || storage !== undefined) {
+    throw new ApiError(403, "Attempt to change restricted settings.");
+  }
+
+  // Explicitly block any algorithm changes under phishingDetection or encryption
+  if (phishingDetection && (phishingDetection.algorithm !== undefined)) {
+    throw new ApiError(403, "Scanning algorithm cannot be changed.");
+  }
+  if (phishingDetection && phishingDetection.sensitivity) {
+    const allowed = ["low", "medium", "high"];
+    if (!allowed.includes(phishingDetection.sensitivity)) {
+      throw new ApiError(400, "Invalid sensitivity value.");
+    }
   }
 
   // Update phishing detection settings
@@ -244,8 +259,19 @@ const updateSecuritySettings = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, user.securitySettings, "Security settings updated successfully."));
 });
 
+// Get security settings
+const getSecuritySettings = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+  const user = await User.findOne({ firebaseUid: user_id }).select("securitySettings");
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+  return res.status(200).json(new ApiResponse(200, user.securitySettings, "Security settings fetched successfully."));
+});
+
 // Save FCM token for push notifications
 const saveFcmToken = asyncHandler(async (req, res) => {
+  console.log("hello");
   const { token } = req.body;
   const { user_id } = req.user;
   if (!token) return res.status(400).json({ message: "token required" });
@@ -307,4 +333,43 @@ const uploadProfileImage = asyncHandler(async (req, res) => {
     );
 });
 
-export {userRegister, userRegisterWithGoogle, userLogin, storePublicKey, getPublicKey, getUserProfile, updateUserProfile, updateSecuritySettings, saveFcmToken, uploadProfileImage};
+// Lookup public keys for a list of user emails
+const lookupPublicKeys = asyncHandler(async (req, res) => {
+  const { emails } = req.body || {};
+  if (!Array.isArray(emails) || emails.length === 0) {
+    return res.status(400).json({ message: "emails[] required" });
+  }
+  const users = await User.find({
+    $or: [
+      { email: { $in: emails } },
+      { platformMail: { $in: emails } },
+    ],
+  }).select("email platformMail securitySettings.encryption.publicKey");
+  const results = users.map((u) => ({
+    email: u.email,
+    platformMail: u.platformMail,
+    publicKey: u.securitySettings?.encryption?.publicKey || null,
+  }));
+  return res.json({ success: true, keys: results });
+});
+
+export {userRegister, userRegisterWithGoogle, userLogin, storePublicKey, getPublicKey, getUserProfile, updateUserProfile, updateSecuritySettings, getSecuritySettings, saveFcmToken, uploadProfileImage, lookupPublicKeys};
+// Storage usage
+export const getStorageUsage = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) return res.status(404).json({ message: "User not found" });
+  // naive compute: sum attachments sizes of user's emails
+  const sent = await (await import("../schema/email.schema.js")).Email.aggregate([
+    { $match: { from: user._id } },
+    { $unwind: { path: "$attachments", preserveNullAndEmptyArrays: true } },
+    { $group: { _id: null, total: { $sum: { $ifNull: ["$attachments.fileSize", 0] } } } },
+  ]);
+  const inbox = await (await import("../schema/email.schema.js")).Email.aggregate([
+    { $match: { "to.user": user._id } },
+    { $unwind: { path: "$attachments", preserveNullAndEmptyArrays: true } },
+    { $group: { _id: null, total: { $sum: { $ifNull: ["$attachments.fileSize", 0] } } } },
+  ]);
+  const used = (sent[0]?.total || 0) + (inbox[0]?.total || 0);
+  res.json({ success: true, used, limit: user.storage?.limit || (1*1024*1024*1024) });
+});

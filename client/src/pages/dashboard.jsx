@@ -22,6 +22,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { sliceLogout } from "../redux/slices/authSlice";
 import { toggleTheme } from "../redux/slices/themeSlice";
 import MailDetail from "../components/MailDetail";
+import { getEmailById } from "../apiRequests/getEmailById";
 import { showEmailLists } from "../apiRequests/showEmailLists";
 import { getAuth } from "firebase/auth";
 
@@ -164,11 +165,15 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-4">
               <button
-                className={`bg-transparent p-2 rounded-full hover:${
+                className={`relative bg-transparent p-2 rounded-full hover:${
                   isDark ? "bg-[#232326]" : "bg-[#f3f4f6]"
                 } ${isDark ? "text-[#f3f4f6]" : "text-[#111]"}`}
+                title="Notifications"
               >
                 <Bell className="w-6 h-6" />
+                {emails.some(e => !e.to?.[0]?.readAt) && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
+                )}
               </button>
               <button
                 className={`bg-transparent p-2 rounded-full hover:${
@@ -294,7 +299,14 @@ export default function Dashboard() {
                 <MailCards
                   isDark={isDark}
                   emails={emails}
-                  setSelectedEmail={setSelectedEmail}
+                  setSelectedEmail={(email) => {
+                    // optimistically mark read in UI
+                    setEmails(prev => prev.map(e => e._id === email._id ? ({
+                      ...e,
+                      to: [{ ...(e.to?.[0] || {}), readAt: new Date().toISOString() }]
+                    }) : e));
+                    navigate(`/user/u0/email/${email._id}`);
+                  }}
                 />
               </div>
             </div>

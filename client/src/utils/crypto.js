@@ -165,4 +165,39 @@ export async function encryptAESForRecipient(aesRawBytes, recipientPubB64) {
   return bufToBase64(enc);
 }
 
-// 5) AES decrypt / RSA decrypt helpers (for client decryption flow) - implement similarly when reading
+// 5) AES decrypt / RSA decrypt helpers (for client decryption flow)
+export async function getLocalPrivateKey(userId) {
+  const db = await getDb();
+  const tx = db.transaction([KEY_STORE_NAME], "readonly");
+  const store = tx.objectStore(KEY_STORE_NAME);
+  const req = store.get(userId);
+  const record = await new Promise((resolve, reject) => {
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = reject;
+  });
+  if (!record?.key) throw new Error("Private key not found on this device");
+  return record.key;
+}
+
+export async function rsaDecryptBase64(privateKey, b64) {
+  const data = base64ToArrayBuffer(b64);
+  const plain = await crypto.subtle.decrypt({ name: "RSA-OAEP" }, privateKey, data);
+  return new Uint8Array(plain);
+}
+
+export async function importAesKeyFromRaw(rawBytes) {
+  return await crypto.subtle.importKey(
+    "raw",
+    rawBytes,
+    { name: "AES-GCM" },
+    false,
+    ["decrypt"]
+  );
+}
+
+export async function aesDecryptTextFromB64(cipherB64, ivB64, aesKey) {
+  const cipher = base64ToArrayBuffer(cipherB64);
+  const iv = new Uint8Array(base64ToArrayBuffer(ivB64));
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, aesKey, cipher);
+  return new TextDecoder().decode(plain);
+}

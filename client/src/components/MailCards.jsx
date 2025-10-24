@@ -16,17 +16,27 @@ export default function MailCards({ isDark, emails = [], setSelectedEmail }) {
               {isDark && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full " />}
             </div>
             <div className="flex flex-col gap-1">
-              <span className={`text-base font-semibold ${isDark ? 'text-blue-200' : 'text-black'}`}>{email.from?.email}</span>
+              <span className={`text-base font-semibold ${isDark ? 'text-blue-200' : 'text-black'}`}>{email.from?.platformMail}</span>
               <span className={`font-bold text-xl ${isDark ? 'text-white' : 'text-black'} font-sans`}>{email.subject}</span>
-              <span className={`text-base ${isDark ? 'text-gray-300' : 'text-gray-500'} truncate`} style={{display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '320px'}}>{email.body}</span>
+              <span className={`text-base ${isDark ? 'text-gray-300' : 'text-gray-500'} truncate`} style={{display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '320px'}}>{email.bodyPreview || ''}</span>
             </div>
           </div>
           <div className=" flex ml-auto flex-col gap-2">
             <div className="flex flex-col justify-between ml-auto">
-              {false && (
-                <span className="bg-[#E50914] text-white px-4 py-2 w-40 rounded-lg text-sm font-bold flex items-center gap-2 mb-3 shadow-lg">
+              {/* Unread indicator */}
+              {(!email.to?.[0]?.readAt) && (
+                <span className="ml-auto bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs">New</span>
+              )}
+              {email.securityAnalysis?.riskLevel && (
+                <span className={`px-4 py-2 w-40 rounded-lg text-sm font-bold flex items-center gap-2 mb-3 shadow-lg ${
+                  email.securityAnalysis.riskLevel === 'high' || email.securityAnalysis.riskLevel === 'critical'
+                    ? 'bg-[#E50914] text-white'
+                    : email.securityAnalysis.riskLevel === 'medium'
+                      ? 'bg-yellow-400 text-black'
+                      : 'bg-gray-200 text-black'
+                }`}>
                   <svg xmlns='http://www.w3.org/2000/svg' className='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0Z' /></svg>
-                  Security Alert
+                  {`Risk: ${String(email.securityAnalysis.riskLevel).toUpperCase()}`}
                 </span>
               )}
             </div>

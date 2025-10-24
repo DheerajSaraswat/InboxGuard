@@ -52,3 +52,25 @@ export const saveFcmToken = async (fcmToken) => {
   }
 };
 
+// Get security settings
+export const getSecuritySettings = async () => {
+  try {
+    const response = await api.get(`${API_BASE_URL}/security-settings`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching security settings:", error);
+    throw error;
+  }
+};
+
+// Update security settings
+export const updateSecuritySettings = async (settings) => {
+  try {
+    const response = await api.put(`${API_BASE_URL}/security-settings`, settings);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating security settings:", error);
+    throw error;
+  }
+};
+

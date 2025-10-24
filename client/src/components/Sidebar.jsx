@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import logo from "../assets/LightThemeLogo.png";
 import { Link } from "react-router-dom";
+import api from "../utils/api";
 
 
 
@@ -21,6 +22,16 @@ export default function Sidebar({ isDark }) {
   const [open, setOpen] = useState(false);
   const draftCount = useSelector(state => state.draft.drafts.length);
   const navigate = useNavigate();
+  const [usage, setUsage] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get("/users/storage-usage");
+        setUsage(res.data);
+      } catch {}
+    })();
+  }, []);
 
   return (
     <>
@@ -157,9 +168,15 @@ export default function Sidebar({ isDark }) {
                 ? "hover:bg-[#232326]/80 text-[#f3f4f6]"
                 : "hover:bg-[#f3f4f6] text-[#111]"
             } font-normal transition`}
+            onClick={() => navigate('/user/u0/settings')}
           >
             <Settings className="w-4 h-4" /> Settings
           </button>
+          {usage && (
+            <div className="px-3 py-2 text-xs text-gray-500">
+              Storage: {Math.round((usage.used/usage.limit)*100)}% ({Math.round(usage.used/1024/1024)} MB / {Math.round(usage.limit/1024/1024)} MB)
+            </div>
+          )}
         </div>
         {/* Sidebar separation */}
        

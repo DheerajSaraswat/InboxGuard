@@ -58,14 +58,18 @@ async function uploadToCloudinary({ blob, fileName }) {
 async function getCurrentUserPublicKeyB64() {
   const response = await api.get("/users/crypto/public-key");
   const publicKeyB64 = response.data.data.publicKey;
-  // Expect { publicKeyB64: string }
   if (!publicKeyB64) {
     throw new Error("Missing user public key from server");
   }
   return publicKeyB64;
 }
 
-export async function encryptEmailAndAttachments({ subject, htmlBody, attachments }) {
+async function lookupRecipientPublicKeys(emails) {
+  const res = await api.post("/users/crypto/lookup-public-keys", { emails });
+  return Array.isArray(res.data?.keys) ? res.data.keys : [];
+}
+
+export async function encryptEmailAndAttachments({ subject, htmlBody, attachments, recipients = [] }) {
   // 1) Generate AES session key
   const { key: aesKey, raw: aesRaw } = await generateAESKeyRaw();
 
@@ -94,22 +98,35 @@ export async function encryptEmailAndAttachments({ subject, htmlBody, attachment
     });
   }
 
-  // 4) Encrypt AES key with current user's public key for at-rest storage
+  // 4) Encrypt AES key for sender and each recipient who has a public key
   const userPublicKeyB64 = await getCurrentUserPublicKeyB64();
-  const encryptedAesKeyB64 = await encryptAESForRecipient(aesRaw, userPublicKeyB64);
+  const encryptedAesKeyForSender = await encryptAESForRecipient(aesRaw, userPublicKeyB64);
+
+  const recipientKeyInfos = await lookupRecipientPublicKeys(recipients);
+  const encryptedKeys = [];
+  for (const info of recipientKeyInfos) {
+    if (info.publicKey) {
+      const wrapped = await encryptAESForRecipient(aesRaw, info.publicKey);
+      encryptedKeys.push({ email: info.platformMail || info.email, encryptedAESKey: wrapped });
+    }
+  }
 
   return {
     subject, // stored in plaintext unless you decide otherwise
     encryptedBody: {
       cipherB64: bodyCipherB64,
       ivB64: bodyIvB64,
-      encryptedAesKeyB64,
+      encryptedAesKeyB64: encryptedAesKeyForSender,
       algo: "AES-GCM-256",
       keyWrappedWith: "RSA-OAEP-2048-SHA256",
     },
     attachments: encryptedUploads,
+    encryptedKeys,
   };
 }
+
+
+
 
 
 
