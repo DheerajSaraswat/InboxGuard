@@ -56,6 +56,23 @@ const sendEmail = asyncHandler(async (req, res) => {
     return { fileName, fileSize, mimeType, cloudinaryUrl, ivB64: att.ivB64, checksum };
   });
 
+  // Format phishing report for database storage
+  let formattedSecurityAnalysis = undefined;
+  if (phishingReport && typeof phishingReport === 'object') {
+    formattedSecurityAnalysis = {
+      riskScore: phishingReport.riskScore || 50,
+      riskLevel: phishingReport.riskLevel || "medium",
+      indicators: Array.isArray(phishingReport.indicators) ? phishingReport.indicators.map(ind => ({
+        type: ind.type || "auto_detected",
+        severity: ind.severity || phishingReport.riskLevel || "medium",
+        description: ind.description || "Phishing detected",
+        detected: ind.detected !== undefined ? ind.detected : true,
+      })) : [],
+      analyzedAt: phishingReport.analyzedAt || new Date(),
+      bypassedByUser: phishingReport.bypassedByUser || false,
+    };
+  }
+
   // Persist email in sender's sent folder
   const emailDoc = await Email.create({
     messageId: crypto.randomUUID() ,
@@ -65,7 +82,7 @@ const sendEmail = asyncHandler(async (req, res) => {
     body: bodyCipherB64,
     bodyChecksum,
     attachments: mappedAttachments,
-    securityAnalysis: phishingReport || undefined,
+    securityAnalysis: formattedSecurityAnalysis,
     encryption: {
       algorithm: "AES-256-GCM",
       keyExchange: "RSA-2048",
@@ -89,7 +106,7 @@ const sendEmail = asyncHandler(async (req, res) => {
       body: bodyCipherB64,
       bodyChecksum,
       attachments: mappedAttachments,
-      securityAnalysis: phishingReport || undefined,
+      securityAnalysis: formattedSecurityAnalysis,
       encryption: {
         algorithm: "AES-256-GCM",
         keyExchange: "RSA-2048",
@@ -128,14 +145,22 @@ const sendEmail = asyncHandler(async (req, res) => {
         data: { emailId: String(emailDoc._id) },
         tokens,
       };
+      // Create a mapping of tokens to user IDs for error handling
+      const tokenUserMap = recipientUsers
+        .map((u, index) => ({
+          userId: u._id,
+          token: u.securitySettings?.notifications?.fcmToken,
+        }))
+        .filter((item) => item.token);
+
       const response = await admin.messaging().sendEachForMulticast(message);
 
       const userIdsToDeleteToken = [];
 
       response.responses.forEach((resp, index) => {
-        if (!resp.success) {
+        if (!resp.success && tokenUserMap[index]) {
           const errorCode = resp.error.code;
-          const tokenItem = tokensWithId[index];
+          const tokenItem = tokenUserMap[index];
 
           // Check for errors indicating an invalid, expired, or uninstalled token
           if (

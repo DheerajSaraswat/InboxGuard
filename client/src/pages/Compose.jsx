@@ -24,6 +24,7 @@ import {
   Send,
   Menu,
   Quote as QuoteIcon,
+  Shield,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { GoogleGenAI } from "@google/genai";
@@ -280,20 +281,58 @@ const EmailEditor = ({ isDark }) => {
     }
     setIsScanning(true);
     const text = editor ? editor.getText() : "";
-    const response = await axios.post("http://127.0.0.1:8000/classify", {
-      email_text: text,
-    });
-    console.log(response);
-    setIsScanning(false);
-    if (response.data.classification === "phishing") {
-      setScanResult(result);
-      setShowAlert(true);
-      return;
+    const htmlContent = editor ? editor.getHTML() : "";
+    
+    try {
+      // Call ML model to detect phishing
+      const response = await axios.post("http://127.0.0.1:8000/classify", {
+        email_text: text,
+      });
+      console.log("ML Model Response:", response.data);
+      setIsScanning(false);
+      
+      if (response.data.classification === "phishing") {
+        // Phishing detected - create phishing report
+        const phishingReport = {
+          reportedBy: "system",
+          reportedAt: new Date().toISOString(),
+          reportType: "auto-scan",
+          confidence: response.data.confidence || 85,
+          emailData: {
+            subject,
+            text: text.substring(0, 500), // Store first 500 chars
+          },
+          analysis: {
+            riskScore: response.data.score || 75,
+            detectedPatterns: response.data.reasons || ["Phishing content detected"],
+            verificationStatus: "pending",
+          },
+          riskLevel: response.data.score > 75 ? "high" : response.data.score > 50 ? "medium" : "low",
+        };
+        
+        setScanResult({
+          riskLevel: phishingReport.riskLevel,
+          indicators: response.data.reasons?.map(reason => ({ description: reason })) || [{ description: "Phishing content detected by ML model" }],
+          phishingReport
+        });
+        setShowAlert(true);
+        return;
+      }
+      
+      // No phishing detected - send email normally
+      await sendEmail();
+    } catch (error) {
+      console.error("Phishing scan error:", error);
+      setIsScanning(false);
+      // If ML model fails, ask user if they want to send anyway
+      const shouldSend = window.confirm("Phishing scan failed. Do you want to send anyway?");
+      if (shouldSend) {
+        await sendEmail();
+      }
     }
-    await sendEmail();
   };
 
-  const sendEmail = async (phishingWrap = null) => {
+  const sendEmail = async (phishingReport = null) => {
     try {
       const htmlBody = editor ? editor.getHTML() : emailContent;
       const encrypted = await encryptEmailAndAttachments({
@@ -303,6 +342,23 @@ const EmailEditor = ({ isDark }) => {
         recipients,
       });
 
+      // Prepare phishing report in format expected by server
+      let formattedPhishingReport = null;
+      if (phishingReport) {
+        formattedPhishingReport = {
+          riskScore: phishingReport.analysis?.riskScore || 75,
+          riskLevel: phishingReport.riskLevel || "medium",
+          indicators: phishingReport.analysis?.detectedPatterns?.map(desc => ({
+            type: "auto_detected",
+            severity: phishingReport.riskLevel,
+            description: desc,
+            detected: true,
+          })) || [],
+          analyzedAt: new Date(),
+          bypassedByUser: true,
+        };
+      }
+
       const payload = {
         to: recipients,
         subject: encrypted.subject,
@@ -310,9 +366,9 @@ const EmailEditor = ({ isDark }) => {
         body: htmlBody,
         attachments: encrypted.attachments,
         encryptedKeys: encrypted.encryptedKeys,
-        phishingReport: phishingWrap?.phishingReport || null,
+        phishingReport: formattedPhishingReport,
       };
-      console.log(payload);
+      console.log("Sending email with payload:", payload);
       const { data } = await api.post("/emails/sendMail", payload);
       toast.success("Email sent");
       if (Array.isArray(data?.missingRecipients) && data.missingRecipients.length) {
@@ -323,8 +379,17 @@ const EmailEditor = ({ isDark }) => {
           </div>
         ));
       }
+      
+      // Clear the compose form after successful send
+      setRecipients([]);
+      setSubject("");
+      editor?.commands.clearContent();
+      setEmailContent("");
+      setAttachedFiles([]);
+      setScanResult(null);
+      setShowAlert(false);
     } catch (err) {
-      console.error(err);
+      console.error("Send email error:", err);
       const serverMsg = err?.response?.data?.message;
       const missing = err?.response?.data?.missing;
       if (serverMsg) {
@@ -345,11 +410,8 @@ const EmailEditor = ({ isDark }) => {
 
   const handleSendAnyway = async () => {
     if (!scanResult) return;
-    const reportWrap = scanEmailAndReport({
-      subject,
-      text: editor ? editor.getText() : "",
-    });
-    await sendEmail(reportWrap);
+    // Send email with phishing report attached
+    await sendEmail(scanResult.phishingReport);
     setShowAlert(false);
     setScanResult(null);
   };
@@ -567,10 +629,20 @@ const EmailEditor = ({ isDark }) => {
             </button>
             <button
               onClick={handleSendEmail}
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              disabled={isScanning}
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50"
             >
-              <Send size={16} />
-              <span className="hidden sm:inline">Send</span>
+              {isScanning ? (
+                <>
+                  <Shield size={16} className="animate-pulse" />
+                  <span className="hidden sm:inline">Scanning...</span>
+                </>
+              ) : (
+                <>
+                  <Send size={16} />
+                  <span className="hidden sm:inline">Send</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -593,10 +665,20 @@ const EmailEditor = ({ isDark }) => {
               </button>
               <button
                 onClick={handleSendEmail}
-                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center space-x-2 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium"
+                disabled={isScanning}
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center space-x-2 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 font-medium disabled:opacity-50"
               >
-                <Send size={18} />
-                <span>Send Email</span>
+                {isScanning ? (
+                  <>
+                    <Shield size={18} className="animate-pulse" />
+                    <span>Scanning for Phishing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={18} />
+                    <span>Send Email</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

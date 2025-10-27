@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { getAuth } from 'firebase/auth';
 import { showEmailLists } from '../apiRequests/showEmailLists';
@@ -12,9 +12,13 @@ export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
   const isMountedRef = useRef(true);
   const fetchTimeoutRef = useRef(null);
   const refreshIntervalRef = useRef(null);
+  const prevEmailsCountRef = useRef(0);
+  const isFetchingRef = useRef(false);
 
-  const fetchEmails = async (silent = false) => {
-    if (!user) return;
+  const fetchEmails = useCallback(async (silent = false) => {
+    if (!user || isFetchingRef.current) return;
+    
+    isFetchingRef.current = true;
     
     try {
       if (!silent) setIsLoadingEmails(true);
@@ -31,8 +35,8 @@ export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
         const newEmails = Array.isArray(list) ? list : [];
         
         // Check for new emails (compare with previous state)
-        if (emails.length > 0 && newEmails.length > emails.length) {
-          const newEmailCount = newEmails.length - emails.length;
+        if (prevEmailsCountRef.current > 0 && newEmails.length > prevEmailsCountRef.current) {
+          const newEmailCount = newEmails.length - prevEmailsCountRef.current;
           if (newEmailCount > 0 && !silent) {
             toast.success(`${newEmailCount} new email${newEmailCount > 1 ? 's' : ''} received!`, {
               duration: 3000,
@@ -40,6 +44,7 @@ export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
           }
         }
         
+        prevEmailsCountRef.current = newEmails.length;
         setEmails(newEmails);
       }
     } catch (e) {
@@ -51,15 +56,16 @@ export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
       if (isMountedRef.current && !silent) {
         setIsLoadingEmails(false);
       }
+      isFetchingRef.current = false;
     }
-  };
+  }, [user, mailbox]);
 
-  const debouncedRefresh = (silent = false) => {
+  const debouncedRefresh = useCallback((silent = false) => {
     if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
     fetchTimeoutRef.current = setTimeout(() => {
       fetchEmails(silent);
     }, 300);
-  };
+  }, [fetchEmails]);
 
   const updateEmail = (emailId, updates) => {
     setEmails(prev => prev.map(email => 
@@ -81,26 +87,37 @@ export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
     isMountedRef.current = true;
     const auth = getAuth();
 
-    // Initial load
-    fetchEmails(true);
+    // Clear any existing intervals/timeouts
+    if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+    if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+    
+    // Reset fetching flag
+    isFetchingRef.current = false;
+
+    // Initial load with delay to avoid race conditions
+    const initialTimeout = setTimeout(() => {
+      if (isMountedRef.current && !isFetchingRef.current) {
+        fetchEmails(true);
+      }
+    }, 500);
 
     // Set up periodic refresh
     refreshIntervalRef.current = setInterval(() => {
-      if (isMountedRef.current && document.visibilityState === 'visible') {
+      if (isMountedRef.current && document.visibilityState === 'visible' && !isFetchingRef.current) {
         debouncedRefresh(true);
       }
     }, refreshInterval);
 
     // Listen for token changes
     const unsubscribe = auth.onIdTokenChanged((u) => {
-      if (u && isMountedRef.current) {
+      if (u && isMountedRef.current && !isFetchingRef.current) {
         debouncedRefresh(false);
       }
     });
 
     // Listen for visibility changes
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isMountedRef.current) {
+      if (document.visibilityState === 'visible' && isMountedRef.current && !isFetchingRef.current) {
         debouncedRefresh(true);
       }
     };
@@ -108,11 +125,12 @@ export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      isMountedRef.current = false;
+      clearTimeout(initialTimeout);
       if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
       unsubscribe?.();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      isMountedRef.current = false;
     };
   }, [user, mailbox]);
 

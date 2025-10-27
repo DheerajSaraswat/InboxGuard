@@ -7,6 +7,7 @@ import { showEmailLists } from "../apiRequests/showEmailLists";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { deleteDraft } from "../apiRequests/deleteDraft";
 
 export default function DraftsPage() {
   const [drafts, setDrafts] = useState([]);
@@ -23,26 +24,40 @@ export default function DraftsPage() {
     }
   }, [user, navigate]);
 
-  useEffect(() => {
+  const fetchDrafts = async () => {
     if (!user) return;
+    try {
+      setIsLoading(true);
+      const auth = getAuth();
+      await auth.currentUser?.getIdToken(false);
+      const list = await showEmailLists("drafts");
+      setDrafts(Array.isArray(list) ? list : []);
+    } catch (e) {
+      console.error("Failed to load drafts:", e);
+      toast.error("Failed to load drafts");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const fetchDrafts = async () => {
-      try {
-        setIsLoading(true);
-        const auth = getAuth();
-        await auth.currentUser?.getIdToken(true);
-        const list = await showEmailLists("drafts");
-        setDrafts(Array.isArray(list) ? list : []);
-      } catch (e) {
-        console.error("Failed to load drafts:", e);
-        toast.error("Failed to load drafts");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
+  useEffect(() => {
     fetchDrafts();
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDeleteDraft = async (draftId, e) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this draft?")) {
+      return;
+    }
+    try {
+      await deleteDraft(draftId);
+      toast.success("Draft deleted successfully");
+      fetchDrafts(); // Reload drafts
+    } catch (error) {
+      console.error("Error deleting draft:", error);
+      toast.error("Failed to delete draft");
+    }
+  };
 
   if (!user) return null;
 
@@ -90,8 +105,8 @@ export default function DraftsPage() {
                       <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{new Date(draft.createdAt).toLocaleString()}</span>
                     </div>
                     <div className="flex ml-auto justify-end mt-auto gap-2">
-                      <button className="px-3 py-1 rounded bg-blue-600 text-white" onClick={e => {e.stopPropagation(); navigate(`/user/u0/compose?draft=${draft._id}`);}}>Edit</button>
-                      <button className="px-3 py-1 rounded bg-red-500 text-white" onClick={e => {e.stopPropagation(); /* TODO: delete draft */}}>Delete</button>
+                      <button className="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors" onClick={e => {e.stopPropagation(); navigate(`/user/u0/compose?draft=${draft._id}`);}}>Edit</button>
+                      <button className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors" onClick={e => handleDeleteDraft(draft._id, e)}>Delete</button>
                     </div>
                   </div>
                 </div>

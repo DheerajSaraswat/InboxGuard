@@ -44,21 +44,45 @@ export default function Sidebar({ isDark }) {
 
   // Fetch unread count periodically
   useEffect(() => {
+    let isMounted = true;
+    let hasFetched = false;
+    
     const fetchUnreadCount = async () => {
+      if (!isMounted) return;
+      
       try {
         const res = await api.get("/emails/emailList?mailbox=inbox");
+        if (!isMounted) return;
+        
         const emails = res.data?.emails || [];
         const unread = emails.filter(email => !email.to?.[0]?.readAt).length;
         setUnreadCount(unread);
       } catch (error) {
-        console.error("Failed to fetch unread count:", error);
+        if (isMounted) {
+          console.error("Failed to fetch unread count:", error);
+        }
       }
     };
 
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000); // Check every 30 seconds
+    // Only fetch after initial mount delay to avoid race conditions
+    const timeout = setTimeout(() => {
+      if (isMounted && !hasFetched) {
+        fetchUnreadCount();
+        hasFetched = true;
+      }
+    }, 1000);
     
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (isMounted) {
+        fetchUnreadCount();
+      }
+    }, 45000); // Check every 45 seconds to avoid quota issues
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -153,8 +177,13 @@ export default function Sidebar({ isDark }) {
               <Star className="w-4 h-4" /> Starred
             </button>
             <button
+              onClick={() => navigate('/sent')}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isDark
+                isActiveRoute('/sent')
+                  ? isDark
+                    ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
+                    : "bg-gray-200 text-[#111] font-semibold"
+                  : isDark
                   ? "hover:bg-[#232326]/80 text-[#f3f4f6]"
                   : "hover:bg-[#f3f4f6] text-[#111]"
               } transition`}

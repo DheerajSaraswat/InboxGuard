@@ -6,3 +6,23 @@ Thanks",phishing,0.851,API classification
 2025-10-27T17:52:11.712339,email,"Hey
 I am looking for a job in your company
 Thanks",legitimate,0.570,API classification
+2025-10-27T19:26:03.833892,email,"hey
+
+Congratulations on your winning Prize .
+
+click on this link www.jauharaansari.com",phishing,0.768,API classification
+2025-10-27T19:28:59.225489,email,"hey
+
+Congratulations on your winning Prize .
+
+click on this link www.jauharaansari.com",phishing,0.768,API classification
+2025-10-27T19:38:06.358089,email,"hey
+
+Congratulations on your winning Prize .
+
+click on this link www.jauharaansari.com",phishing,0.768,API classification
+2025-10-27T19:45:01.371675,email,"hey
+
+Congratulations on your winning Prize .
+
+click on this link www.jauharaansari.com",phishing,0.768,API classification
