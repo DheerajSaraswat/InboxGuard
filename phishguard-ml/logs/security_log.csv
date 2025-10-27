@@ -1,0 +1,8 @@
+timestamp,source,content,classification,confidence,metadata
+2025-10-27T17:51:01.486653,email,"Hey
+Congratulations for winning our lucky contest, headover to the provided link and fill the details to claim your prizes.
+https://www.gOOgle.com/
+Thanks",phishing,0.851,API classification
+2025-10-27T17:52:11.712339,email,"Hey
+I am looking for a job in your company
+Thanks",legitimate,0.570,API classification
