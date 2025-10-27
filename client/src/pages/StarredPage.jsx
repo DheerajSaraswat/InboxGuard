@@ -1,34 +1,29 @@
+import React, { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
   MoreHorizontal,
   Search,
-  Trash2,
   User,
   LogOut,
   Moon,
   Sun,
   UserCircle,
+  ArrowLeft,
+  Star,
 } from "lucide-react";
-
-import React, { useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import MailCards from "../components/MailCards";
-import { useState } from "react";
 import toast from "react-hot-toast";
-import { Link, useNavigate } from "react-router-dom";
 import { logout } from "../common/firebase";
-import { useDispatch, useSelector } from "react-redux";
 import { sliceLogout } from "../redux/slices/authSlice";
 import { toggleTheme } from "../redux/slices/themeSlice";
-import MailDetail from "../components/MailDetail";
-import { getEmailById } from "../apiRequests/getEmailById";
-import { moveEmailToTrash } from "../apiRequests/moveToTrash";
-import { useEmailFetch } from "../hooks/useEmailFetch";
+import { showEmailLists } from "../apiRequests/showEmailLists";
 import { getAuth } from "firebase/auth";
+import { useEmailFetch } from "../hooks/useEmailFetch";
 
-export default function Dashboard() {
-  // State for selected email
-  const [selectedEmail, setSelectedEmail] = useState(null);
+export default function StarredPage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -38,7 +33,7 @@ export default function Dashboard() {
   const isDark = theme === "dark";
 
   // Use the custom hook for email fetching
-  const { emails, isLoadingEmails, updateEmail, removeEmail } = useEmailFetch('inbox');
+  const { emails, isLoadingEmails, updateEmail } = useEmailFetch('starred');
 
   useEffect(() => {
     if (!user) {
@@ -59,7 +54,7 @@ export default function Dashboard() {
       toast.error("Error logging out");
     }
   };
-  
+
   // Tailwind dark mode: add/remove 'dark' class on html element
   useEffect(() => {
     const root = document.documentElement;
@@ -69,19 +64,6 @@ export default function Dashboard() {
       root.classList.remove("dark");
     }
   }, [isDark]);
-
-  const handleDeleteEmail = async (email) => {
-    try {
-      await moveEmailToTrash(email._id);
-      toast.success("Email moved to trash");
-      setSelectedEmail(null);
-      // Use the hook's removeEmail function for optimistic updates
-      removeEmail(email._id);
-    } catch (error) {
-      console.error("Error moving email to trash:", error);
-      toast.error("Failed to move email to trash");
-    }
-  };
 
   if (!user) return null;
 
@@ -97,7 +79,7 @@ export default function Dashboard() {
       >
         <div className="flex items-center gap-3">
           <div className="animate-spin h-6 w-6 rounded-full border-2 border-current border-t-transparent" />
-          <span className="text-lg font-medium">Loading your inbox…</span>
+          <span className="text-lg font-medium">Loading starred emails…</span>
         </div>
       </div>
     );
@@ -121,10 +103,19 @@ export default function Dashboard() {
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 flex-1">
+              <button
+                onClick={() => navigate('/user/u0/dashboard')}
+                className={`p-2 rounded-full hover:${
+                  isDark ? "bg-[#232326]" : "bg-[#f3f4f6]"
+                } ${isDark ? "text-[#f3f4f6]" : "text-[#111]"}`}
+                title="Back to Inbox"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#bdbdbd]" />
                 <input
-                  placeholder="Search emails..."
+                  placeholder="Search starred emails..."
                   className="pl-10 py-2 w-full rounded-lg border bg-white text-[#111]"
                   style={{
                     fontSize: "1rem",
@@ -179,12 +170,11 @@ export default function Dashboard() {
                         ? "bg-[#232326] border-[#232326]"
                         : "bg-white border-[#e5e7eb]"
                     } border rounded-2xl shadow-xl z-10 py-2 font-sans`}
-                    onClick={(e) => e.stopPropagation()} // ✅ prevent outer click from toggling
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        console.log("hello");
                         navigate("/user/u0/profile");
                         setShowDropdown(false);
                       }}
@@ -230,54 +220,51 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex-1 flex border-l border-gray-200 min-h-0">
-          {/* Gmail-style: Inbox full width if no email selected, else split view */}
-          {!selectedEmail ? (
+          <div
+            className={`flex-1 flex flex-col min-h-0 ${
+              isDark ? "bg-[#18181b]" : "bg-white"
+            }`}
+          >
             <div
-              className={`flex-1 flex flex-col min-h-0 ${
-                isDark ? "bg-[#18181b]" : "bg-white"
+              className={`p-4 border-b ${
+                isDark ? "bg-[#232326]" : "bg-white"
+              } border-gray-200`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Star className="w-8 h-8 text-yellow-500" />
+                  <h2 className="text-4xl font-bold">Starred</h2>
+                </div>
+                <button className="bg-transparent p-2 rounded-full hover:bg-[#f3f4f6]">
+                  <MoreHorizontal className="w-4 h-4 text-[#111]" />
+                </button>
+              </div>
+            </div>
+            <div
+              className={`flex-1 overflow-y-auto ${
+                isDark
+                  ? "bg-gradient-to-b from-[#18181b] via-[#232326] to-[#18181b]"
+                  : "bg-[#F3F6FA]"
               }`}
             >
-              <div
-                className={`p-4 border-b ${
-                  isDark ? "bg-[#232326]" : "bg-white"
-                } border-gray-200`}
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-4xl font-bold">Inbox</h2>
-                  <button className="bg-transparent p-2 rounded-full hover:bg-[#f3f4f6]">
-                    <MoreHorizontal className="w-4 h-4 text-[#111]" />
-                  </button>
+              {emails.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                  <Star className="w-16 h-16 text-gray-400 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-500 mb-2">No starred emails</h3>
+                  <p className="text-gray-400">Star emails to keep them here for easy access</p>
                 </div>
-              </div>
-              <div
-                className={`flex-1 overflow-y-auto ${
-                  isDark
-                    ? "bg-gradient-to-b from-[#18181b] via-[#232326] to-[#18181b]"
-                    : "bg-[#F3F6FA]"
-                }`}
-              >
+              ) : (
                 <MailCards
                   isDark={isDark}
                   emails={emails}
                   setSelectedEmail={(email) => {
-                    // optimistically mark read in UI
-                    updateEmail(email._id, {
-                      to: [{ ...(email.to?.[0] || {}), readAt: new Date().toISOString() }]
-                    });
                     navigate(`/user/u0/email/${email._id}`);
                   }}
                   onEmailUpdate={updateEmail}
                 />
-              </div>
+              )}
             </div>
-          ) : (
-            <MailDetail
-              email={selectedEmail}
-              isDark={isDark}
-              onBack={() => setSelectedEmail(null)}
-              onDelete={() => handleDeleteEmail(selectedEmail)}
-            />
-          )}
+          </div>
         </div>
       </div>
     </div>

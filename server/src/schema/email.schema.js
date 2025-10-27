@@ -66,7 +66,7 @@ const EmailSchema = new Schema({
   threadId: { type: String }, // for grouping emails
   mailbox: {
     type: String,
-    enum: ["inbox", "sent", "spam", "trash"],
+    enum: ["inbox", "sent", "spam", "trash", "archive"],
     default: "inbox",
   },
 
@@ -75,6 +75,9 @@ const EmailSchema = new Schema({
     enum: ["draft", "sent", "delivered", "failed", "blocked"],
     default: "sent",
   },
+
+  starred: { type: Boolean, default: false },
+  archived: { type: Boolean, default: false },
 
   createdAt: { type: Date, default: Date.now },
 });

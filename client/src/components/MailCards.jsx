@@ -1,6 +1,37 @@
 import React from "react";
+import { Star, Archive } from "lucide-react";
+import { toggleStarred } from "../apiRequests/toggleStarred";
+import { toggleArchive } from "../apiRequests/toggleArchive";
+import toast from "react-hot-toast";
 
-export default function MailCards({ isDark, emails = [], setSelectedEmail, isTrashMode = false, selectedEmails = [], onSelectEmail }) {
+export default function MailCards({ isDark, emails = [], setSelectedEmail, isTrashMode = false, selectedEmails = [], onSelectEmail, onEmailUpdate }) {
+  
+  const handleStarClick = async (e, email) => {
+    e.stopPropagation();
+    try {
+      const result = await toggleStarred(email._id);
+      if (onEmailUpdate) {
+        onEmailUpdate(email._id, { starred: result.starred });
+      }
+      toast.success(result.starred ? "Email starred" : "Email unstarred");
+    } catch (error) {
+      toast.error("Failed to update starred status");
+    }
+  };
+
+  const handleArchiveClick = async (e, email) => {
+    e.stopPropagation();
+    try {
+      const result = await toggleArchive(email._id);
+      if (onEmailUpdate) {
+        onEmailUpdate(email._id, { archived: result.archived });
+      }
+      toast.success(result.archived ? "Email archived" : "Email unarchived");
+    } catch (error) {
+      toast.error("Failed to update archive status");
+    }
+  };
+
   return (
     <div className={`flex flex-col gap-8 py-8 px-8 ${isDark ? 'bg-transparent' : 'bg-[#F3F6FA]'}`}>
       {emails.map(email => (
@@ -32,6 +63,33 @@ export default function MailCards({ isDark, emails = [], setSelectedEmail, isTra
           </div>
           <div className=" flex ml-auto flex-col gap-2">
             <div className="flex flex-col justify-between ml-auto">
+              {/* Action buttons */}
+              {!isTrashMode && (
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={(e) => handleStarClick(e, email)}
+                    className={`p-2 rounded-full transition-colors ${
+                      email.starred 
+                        ? 'text-yellow-500 bg-yellow-50' 
+                        : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'
+                    }`}
+                    title={email.starred ? "Unstar" : "Star"}
+                  >
+                    <Star size={16} fill={email.starred ? "currentColor" : "none"} />
+                  </button>
+                  <button
+                    onClick={(e) => handleArchiveClick(e, email)}
+                    className={`p-2 rounded-full transition-colors ${
+                      email.archived 
+                        ? 'text-blue-500 bg-blue-50' 
+                        : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50'
+                    }`}
+                    title={email.archived ? "Unarchive" : "Archive"}
+                  >
+                    <Archive size={16} />
+                  </button>
+                </div>
+              )}
               {/* Unread indicator */}
               {(!email.to?.[0]?.readAt) && (
                 <span className="ml-auto bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs">New</span>

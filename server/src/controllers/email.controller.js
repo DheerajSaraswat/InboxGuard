@@ -180,9 +180,29 @@ const showEmailList = asyncHandler(async(req, res)=>{
   try {
     let query = {};
     if (mailbox === "inbox") {
-      query = { "to.user": user._id, mailbox: "inbox" };
+      query = { "to.user": user._id, mailbox: "inbox", status: { $ne: "draft" } };
     } else if (mailbox === "sent") {
       query = { from: user._id, mailbox: "sent" };
+    } else if (mailbox === "starred") {
+      query = { 
+        $or: [
+          { "to.user": user._id },
+          { from: user._id }
+        ],
+        starred: true,
+        mailbox: { $ne: "trash" }
+      };
+    } else if (mailbox === "archive") {
+      query = { 
+        $or: [
+          { "to.user": user._id },
+          { from: user._id }
+        ],
+        archived: true,
+        mailbox: "archive"
+      };
+    } else if (mailbox === "drafts") {
+      query = { from: user._id, status: "draft" };
     } else {
       query = { $or: [
         { "to.user": user._id, mailbox: "inbox" },
@@ -300,4 +320,83 @@ const deletePermanently = asyncHandler(async (req, res) => {
   return res.json({ success: true });
 });
 
-export { sendEmail, showEmailList, getEmailById, markEmailRead, moveToTrash, bulkMoveToTrash, deletePermanently };
+const toggleStarred = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+  const { id } = req.params;
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) return res.status(404).json({ message: "User not found" });
+  
+  const email = await Email.findOne({ _id: id, $or: [{ "to.user": user._id }, { from: user._id }] });
+  if (!email) return res.status(404).json({ message: "Email not found" });
+  
+  email.starred = !email.starred;
+  await email.save();
+  
+  return res.json({ success: true, starred: email.starred });
+});
+
+const toggleArchive = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+  const { id } = req.params;
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) return res.status(404).json({ message: "User not found" });
+  
+  const email = await Email.findOne({ _id: id, $or: [{ "to.user": user._id }, { from: user._id }] });
+  if (!email) return res.status(404).json({ message: "Email not found" });
+  
+  email.archived = !email.archived;
+  if (email.archived) {
+    email.mailbox = "archive";
+  } else {
+    // Restore to original mailbox (inbox or sent)
+    email.mailbox = email.from.toString() === user._id.toString() ? "sent" : "inbox";
+  }
+  await email.save();
+  
+  return res.json({ success: true, archived: email.archived });
+});
+
+const saveDraft = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+  const { to, subject, body, attachments = [] } = req.body;
+  const fromUser = await User.findOne({ firebaseUid: user_id });
+  if (!fromUser) return res.status(404).json({ message: "User not found" });
+
+  // Encrypt email body
+  const bodyCipherB64 = body ? encryptText(body) : "";
+  const bodyChecksum = crypto
+    .createHash("sha256")
+    .update(bodyCipherB64)
+    .digest("hex");
+
+  const mappedAttachments = (attachments || []).map((att) => {
+    const fileName = att.originalName ? `${att.originalName}.enc` : undefined;
+    const fileSize = typeof att.encryptedSize === "number" ? att.encryptedSize : undefined;
+    const mimeType = att.mimeType;
+    const cloudinaryUrl = att.url;
+    const checksumSource = `${att.url || ""}|${att.ivB64 || ""}|${att.encryptedSize || ""}`;
+    const checksum = crypto.createHash("sha256").update(checksumSource).digest("hex");
+    return { fileName, fileSize, mimeType, cloudinaryUrl, ivB64: att.ivB64, checksum };
+  });
+
+  const draftDoc = await Email.create({
+    messageId: crypto.randomUUID(),
+    from: fromUser._id,
+    to: to ? [{ user: fromUser._id }] : [],
+    subject: subject || "",
+    body: bodyCipherB64,
+    bodyChecksum,
+    attachments: mappedAttachments,
+    encryption: {
+      algorithm: "AES-256-GCM",
+      keyExchange: "RSA-2048",
+      encryptedKeys: [],
+    },
+    mailbox: "inbox", // Drafts are stored in inbox with draft status
+    status: "draft",
+  });
+
+  return res.status(201).json({ success: true, id: draftDoc._id });
+});
+
+export { sendEmail, showEmailList, getEmailById, markEmailRead, moveToTrash, bulkMoveToTrash, deletePermanently, toggleStarred, toggleArchive, saveDraft };

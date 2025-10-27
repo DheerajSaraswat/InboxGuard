@@ -33,7 +33,7 @@ const messaging = getMessaging(app)
 
 const provider = new GoogleAuthProvider();
 
-const auth = getAuth();
+export const auth = getAuth();
 
 export const googleAuth = async (rememberMe) => {
   try {

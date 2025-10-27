@@ -24,10 +24,9 @@ import { toggleTheme } from "../redux/slices/themeSlice";
 import { showEmailLists } from "../apiRequests/showEmailLists";
 import { getAuth } from "firebase/auth";
 import api from "../utils/api";
+import { useEmailFetch } from "../hooks/useEmailFetch";
 
 export default function TrashPage() {
-  const [emails, setEmails] = useState([]);
-  const [isLoadingEmails, setIsLoadingEmails] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedEmails, setSelectedEmails] = useState([]);
   const navigate = useNavigate();
@@ -36,6 +35,9 @@ export default function TrashPage() {
   const { user } = useSelector((state) => state.auth);
   const theme = useSelector((state) => state.theme.mode);
   const isDark = theme === "dark";
+
+  // Use the custom hook for email fetching
+  const { emails, isLoadingEmails, removeEmail } = useEmailFetch('trash');
 
   useEffect(() => {
     if (!user) {
@@ -67,50 +69,6 @@ export default function TrashPage() {
     }
   }, [isDark]);
 
-  useEffect(() => {
-    if (!user) return;
-
-    let isMounted = true;
-    const auth = getAuth();
-
-    const fetchTrashEmails = async (silent = false) => {
-      try {
-        if (!silent) setIsLoadingEmails(true);
-        // Ensure a fresh token is available; api layer likely reads it
-        await auth.currentUser?.getIdToken(true);
-        const list = await showEmailLists("trash");
-        if (isMounted) setEmails(Array.isArray(list) ? list : []);
-      } catch (e) {
-        console.error(e);
-        if (isMounted && !silent) toast.error("Failed to load trash");
-      } finally {
-        if (isMounted && !silent) setIsLoadingEmails(false);
-      }
-    };
-
-    // Initial load right after login: show loader but suppress error toast
-    setIsLoadingEmails(true);
-    fetchTrashEmails(true).finally(() => setIsLoadingEmails(false));
-
-    // Also reload when Firebase rotates/refreshed token
-    const unsubscribe = auth.onIdTokenChanged((u) => {
-      if (u && isMounted) {
-        fetchTrashEmails(false);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      unsubscribe?.();
-    };
-  }, [user]);
-
-  const handleProfilePage = (e) => {
-    e.preventDefault();
-    console.log("hello");
-    navigate("/user/u0/profile");
-  };
-
   const handleSelectEmail = (emailId) => {
     setSelectedEmails(prev => 
       prev.includes(emailId) 
@@ -134,17 +92,26 @@ export default function TrashPage() {
     }
 
     try {
-      // Delete emails permanently one by one
-      for (const emailId of selectedEmails) {
-        await api.delete(`/emails/${emailId}/delete`);
-      }
-      
-      toast.success(`${selectedEmails.length} email(s) deleted permanently`);
+      // Optimistically remove emails from UI
+      selectedEmails.forEach(emailId => removeEmail(emailId));
       setSelectedEmails([]);
       
-      // Refresh the trash list
-      const list = await showEmailLists("trash");
-      setEmails(Array.isArray(list) ? list : []);
+      // Delete emails permanently one by one in background
+      const deletePromises = selectedEmails.map(emailId => 
+        api.delete(`/emails/${emailId}/delete`).catch(error => {
+          console.error(`Failed to delete email ${emailId}:`, error);
+          return { error, emailId };
+        })
+      );
+      
+      const results = await Promise.all(deletePromises);
+      const failedDeletes = results.filter(result => result.error);
+      
+      if (failedDeletes.length > 0) {
+        toast.error(`Failed to delete ${failedDeletes.length} email(s)`);
+      } else {
+        toast.success(`${selectedEmails.length} email(s) deleted permanently`);
+      }
     } catch (error) {
       console.error("Error deleting emails:", error);
       toast.error("Failed to delete emails");

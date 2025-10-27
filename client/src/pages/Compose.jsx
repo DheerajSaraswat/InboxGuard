@@ -38,6 +38,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import LinkExt from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
 import Blockquote from "@tiptap/extension-blockquote";
+import axios from "axios";
 
 const EmailEditor = ({ isDark }) => {
   const [recipients, setRecipients] = useState([]);
@@ -279,9 +280,12 @@ const EmailEditor = ({ isDark }) => {
     }
     setIsScanning(true);
     const text = editor ? editor.getText() : "";
-    const result = scannerRef.current.scan({ text, subject });
+    const response = await axios.post("http://127.0.0.1:8000/classify", {
+      email_text: text,
+    });
+    console.log(response);
     setIsScanning(false);
-    if (result.riskLevel !== "minimal") {
+    if (response.data.classification === "phishing") {
       setScanResult(result);
       setShowAlert(true);
       return;
@@ -360,9 +364,16 @@ const EmailEditor = ({ isDark }) => {
         body: editor ? editor.getHTML() : emailContent,
         attachments: attachedFiles,
       };
+      
+      // Save to server
+      const { saveDraft } = await import("../apiRequests/saveDraft");
+      await saveDraft(draft);
+      
+      // Also save to localStorage as backup
       localStorage.setItem("inboxguard_draft", JSON.stringify(draft));
       toast.success("Draft saved");
     } catch (e) {
+      console.error("Failed to save draft:", e);
       toast.error("Failed to save draft");
     }
   };

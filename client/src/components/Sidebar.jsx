@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   PenSquare,
   Inbox,
@@ -8,7 +8,6 @@ import {
   Send,
   FileText,
   Archive,
-  Shield,
   Trash2,
   Settings,
 } from "lucide-react";
@@ -22,7 +21,17 @@ export default function Sidebar({ isDark }) {
   const [open, setOpen] = useState(false);
   const draftCount = useSelector(state => state.draft.drafts.length);
   const navigate = useNavigate();
+  const location = useLocation();
   const [usage, setUsage] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Helper function to determine if a route is active
+  const isActiveRoute = (path) => {
+    if (path === '/user/u0' || path === '/user/u0/dashboard') {
+      return location.pathname === '/user/u0' || location.pathname === '/user/u0/dashboard';
+    }
+    return location.pathname === path;
+  };
 
   useEffect(() => {
     (async () => {
@@ -31,6 +40,25 @@ export default function Sidebar({ isDark }) {
         setUsage(res.data);
       } catch {}
     })();
+  }, []);
+
+  // Fetch unread count periodically
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await api.get("/emails/emailList?mailbox=inbox");
+        const emails = res.data?.emails || [];
+        const unread = emails.filter(email => !email.to?.[0]?.readAt).length;
+        setUnreadCount(unread);
+      } catch (error) {
+        console.error("Failed to fetch unread count:", error);
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -86,27 +114,41 @@ export default function Sidebar({ isDark }) {
           </Link>
           <nav className="flex flex-col gap-4 text-[1rem]">
             <button
+              onClick={() => navigate('/user/u0/dashboard')}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isDark
-                  ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
-                  : "bg-gray-200 text-[#111] font-semibold"
-              } hover:scale-[1.03] transition`}
-            >
-              <Inbox className="w-4 h-4" /> Inbox{" "}
-              <span
-                className={`ml-auto ${
-                  isDark
-                    ? "bg-[#18181b] text-[#f3f4f6]"
-                    : "bg-[#e5e7eb] text-[#111]"
-                } text-xs px-2 py-1 rounded-full`}
-              ></span>
-            </button>
-            <button
-              className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isDark
+                isActiveRoute('/user/u0/dashboard')
+                  ? isDark
+                    ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
+                    : "bg-gray-200 text-[#111] font-semibold"
+                  : isDark
                   ? "hover:bg-[#232326]/80 text-[#f3f4f6]"
                   : "hover:bg-[#f3f4f6] text-[#111]"
-              } font-normal transition`}
+              } transition`}
+            >
+              <Inbox className="w-4 h-4" /> Inbox{" "}
+              {unreadCount > 0 && (
+                <span
+                  className={`ml-auto ${
+                    isDark
+                      ? "bg-red-600 text-white"
+                      : "bg-red-500 text-white"
+                  } text-xs px-2 py-1 rounded-full font-bold`}
+                >
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => navigate('/starred')}
+              className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
+                isActiveRoute('/starred')
+                  ? isDark
+                    ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
+                    : "bg-gray-200 text-[#111] font-semibold"
+                  : isDark
+                  ? "hover:bg-[#232326]/80 text-[#f3f4f6]"
+                  : "hover:bg-[#f3f4f6] text-[#111]"
+              } transition`}
             >
               <Star className="w-4 h-4" /> Starred
             </button>
@@ -120,19 +162,28 @@ export default function Sidebar({ isDark }) {
               <Send className="w-4 h-4" /> Sent
             </button>
             <button
+              onClick={() => navigate('/drafts')}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isDark
+                isActiveRoute('/drafts')
+                  ? isDark
+                    ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
+                    : "bg-gray-200 text-[#111] font-semibold"
+                  : isDark
                   ? "hover:bg-[#232326]/80 text-[#f3f4f6]"
                   : "hover:bg-[#f3f4f6] text-[#111]"
               } transition`}
-              onClick={() => navigate('/drafts')}
             >
               <FileText className="w-4 h-4" /> Drafts
               <span className="ml-auto bg-[#e5e7eb] text-xs px-2 py-1 rounded-full text-[#111]">{draftCount}</span>
             </button>
             <button
+              onClick={() => navigate('/archive')}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isDark
+                isActiveRoute('/archive')
+                  ? isDark
+                    ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
+                    : "bg-gray-200 text-[#111] font-semibold"
+                  : isDark
                   ? "hover:bg-[#232326]/80 text-[#f3f4f6]"
                   : "hover:bg-[#f3f4f6] text-[#111]"
               } transition`}
@@ -140,22 +191,16 @@ export default function Sidebar({ isDark }) {
               <Archive className="w-4 h-4" /> Archive
             </button>
             <button
+              onClick={() => navigate('/trash')}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isDark
-                  ? " font-bold hover:bg-[#18181b] "
-                  : "text-[#E50914] hover:bg-[#f3f4f6] font-semibold"
-              } transition`}
-            >
-              <Shield className="w-4 h-4" /> Spam{" "}
-              <span className="ml-auto bg-[#E50914] text-white text-xs px-2 py-1 rounded-full"></span>
-            </button>
-            <button
-              className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isDark
+                isActiveRoute('/trash')
+                  ? isDark
+                    ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
+                    : "bg-gray-200 text-[#111] font-semibold"
+                  : isDark
                   ? "hover:bg-[#232326]/80 text-[#f3f4f6]"
                   : "hover:bg-[#f3f4f6] text-[#111]"
               } transition`}
-              onClick={() => navigate('/trash')}
             >
               <Trash2 className="w-4 h-4" /> Trash
             </button>
