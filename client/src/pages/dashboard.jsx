@@ -147,7 +147,11 @@ export default function Dashboard() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#bdbdbd]" />
                 <input
                   placeholder="Search emails..."
-                  className="pl-10 py-2 w-full rounded-lg border bg-white text-[#111]"
+                  className={`pl-10 py-2 w-full rounded-lg border transition-colors ${
+                    isDark
+                      ? "bg-[#0f0f11] text-[#f3f4f6] placeholder:text-[#9ca3af] border-[#333] focus:border-[#4b5563]"
+                      : "bg-white text-[#111] border-[#e5e7eb] focus:border-[#cbd5e1]"
+                  }`}
                   style={{
                     fontSize: "1rem",
                     fontFamily:
@@ -268,8 +272,14 @@ export default function Dashboard() {
               >
                 <div className="flex items-center justify-between">
                   <h2 className="text-4xl font-bold">Inbox</h2>
-                  <button className="bg-transparent p-2 rounded-full hover:bg-[#f3f4f6]">
-                    <MoreHorizontal className="w-4 h-4 text-[#111]" />
+                  <button
+                    className={`bg-transparent p-2 rounded-full transition-colors ${
+                      isDark ? "hover:bg-[#18181b]" : "hover:bg-[#f3f4f6]"
+                    }`}
+                  >
+                    <MoreHorizontal
+                      className={`w-4 h-4 ${isDark ? "text-[#bdbdbd]" : "text-[#111]"}`}
+                    />
                   </button>
                 </div>
               </div>

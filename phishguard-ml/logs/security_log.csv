@@ -45,3 +45,12 @@ hey
 2025-10-31T23:40:48.010673,email,"Hey,
 wassup",phishing,0.550,API classification
 2025-10-31T23:44:05.194171,email,Ott,phishing,0.550,API classification
+2025-10-31T23:54:19.009557,email,what are you doing ????????,phishing,0.550,API classification
+2025-10-31T23:56:52.227422,email,This is image,phishing,0.550,API classification
+2025-11-01T00:08:02.691668,email,"Subject: Congratulations! You've Won a Prize!
+
+Dear [Recipient Name],
+
+We are thrilled to inform you that you have won a prize!
+
+[Clearly state what they won. Be specific. For example: ""You have won a",phishing,0.741,API classification
