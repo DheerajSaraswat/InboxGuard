@@ -12,6 +12,7 @@ import {
 
 export default function MailDetail({ email, onBack, onDelete }) {
   const [isClosing, setIsClosing] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState(null);
   console.log(email);
   if (!email) return null;
 
@@ -113,7 +114,94 @@ export default function MailDetail({ email, onBack, onDelete }) {
             className="prose prose-sm max-w-none text-foreground leading-relaxed text-sm"
             dangerouslySetInnerHTML={{ __html: email.body }}
           />
+
+          {/* Attachments */}
+          {Array.isArray(email.attachments) && email.attachments.length > 0 && (
+            <div className="mt-4 border-t pt-3">
+              <div className="text-xs font-semibold mb-2">Attachments ({email.attachments.length})</div>
+              <div className="grid grid-cols-1 gap-3">
+                {email.attachments.map((att, idx) => {
+                  const url = att.cloudinaryUrl || att.url;
+                  const type = String(att.mimeType || '').toLowerCase();
+                  const isImage = type.startsWith('image/');
+                  const isVideo = type.startsWith('video/');
+                  const name = att.fileName || att.originalName || `file-${idx+1}`;
+                  return (
+                    <div key={idx} className="border rounded-lg p-2 flex items-center gap-3">
+                      {isImage ? (
+                        <button onClick={() => setPreviewAttachment({ ...att, url })} className="shrink-0">
+                          <img src={url} alt={name} className="w-16 h-16 object-cover rounded" crossOrigin="anonymous" />
+                        </button>
+                      ) : isVideo ? (
+                        <button onClick={() => setPreviewAttachment({ ...att, url })} className="shrink-0">
+                          <video className="w-24 h-16 rounded" src={url} crossOrigin="anonymous" />
+                        </button>
+                      ) : (
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center text-xs font-semibold">FILE</div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium truncate">{name}</div>
+                        {att.fileSize || att.originalSize ? (
+                          <div className="text-[10px] text-muted-foreground">{Math.round(((att.fileSize||att.originalSize)/1024) || 0)} KB</div>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(isImage || isVideo) && (
+                          <button onClick={() => setPreviewAttachment({ ...att, url })} className="text-xs px-2 py-1 rounded bg-muted border">Preview</button>
+                        )}
+                        <button
+                          onClick={async () => {
+                            try {
+                              const apiUrl = `/emails/${email._id}/attachments/${idx}/download`;
+                              const res = await fetch((window.__API_BASE__ || import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "") + apiUrl, {
+                                credentials: 'include'
+                              });
+                              if (!res.ok) throw new Error('download failed');
+                              const blob = await res.blob();
+                              const a = document.createElement('a');
+                              const objectUrl = URL.createObjectURL(blob);
+                              a.href = objectUrl;
+                              a.download = name;
+                              document.body.appendChild(a);
+                              a.click();
+                              a.remove();
+                              URL.revokeObjectURL(objectUrl);
+                            } catch (e) {}
+                          }}
+                          className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground border"
+                        >
+                          Download
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Attachment preview modal */}
+        {previewAttachment && (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+            <div className="relative bg-background rounded-xl shadow-2xl p-2 max-w-[90vw] max-h-[85vh]">
+              <button
+                onClick={() => setPreviewAttachment(null)}
+                className="absolute -top-10 right-0 text-white text-sm px-3 py-1 rounded bg-black/50"
+              >
+                Close
+              </button>
+              {String(previewAttachment.mimeType || '').toLowerCase().startsWith('image/') ? (
+                <img src={previewAttachment.cloudinaryUrl || previewAttachment.url} alt={previewAttachment.fileName || previewAttachment.originalName}
+                     className="max-w-[85vw] max-h-[80vh] object-contain" crossOrigin="anonymous" />
+              ) : String(previewAttachment.mimeType || '').toLowerCase().startsWith('video/') ? (
+                <video src={previewAttachment.cloudinaryUrl || previewAttachment.url} controls className="max-w-[85vw] max-h-[80vh]" crossOrigin="anonymous" />
+              ) : (
+                <div className="p-4 text-sm">Preview not available. Use Download instead.</div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

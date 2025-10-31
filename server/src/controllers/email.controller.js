@@ -5,6 +5,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import crypto from "crypto";
 import admin from "../config/firebaseAdmin.js";
 import { encryptText, decryptText } from "../utils/encryption.js";
+import { Readable } from "stream";
 
 const sendEmail = asyncHandler(async (req, res) => {
   const { user_id, email: senderEmail } = req.user;
@@ -59,7 +60,7 @@ const sendEmail = asyncHandler(async (req, res) => {
       ? `${att.url || ""}|${att.ivB64 || ""}|${att.encryptedSize || ""}`
       : `${att.url || ""}|${att.originalSize || ""}`;
     const checksum = crypto.createHash("sha256").update(checksumSource).digest("hex");
-    return { fileName, fileSize, mimeType, cloudinaryUrl, ivB64: att.ivB64, checksum };
+    return { fileName, fileSize, mimeType, cloudinaryUrl, ivB64: att.ivB64, checksum, publicId: att.publicId, resourceType: att.resourceType, format: att.format };
   });
 
   // Format phishing report for database storage
@@ -422,7 +423,7 @@ const saveDraft = asyncHandler(async (req, res) => {
       ? `${att.url || ""}|${att.ivB64 || ""}|${att.encryptedSize || ""}`
       : `${att.url || ""}|${att.originalSize || ""}`;
     const checksum = crypto.createHash("sha256").update(checksumSource).digest("hex");
-    return { fileName, fileSize, mimeType, cloudinaryUrl, ivB64: att.ivB64, checksum };
+    return { fileName, fileSize, mimeType, cloudinaryUrl, ivB64: att.ivB64, checksum, publicId: att.publicId, resourceType: att.resourceType, format: att.format };
   });
 
   const draftDoc = await Email.create({
@@ -445,4 +446,42 @@ const saveDraft = asyncHandler(async (req, res) => {
   return res.status(201).json({ success: true, id: draftDoc._id });
 });
 
-export { sendEmail, showEmailList, getEmailById, markEmailRead, moveToTrash, bulkMoveToTrash, deletePermanently, toggleStarred, toggleArchive, saveDraft };
+const downloadAttachment = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+  const { id, idx } = req.params;
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  const email = await Email.findOne({
+    _id: id,
+    $or: [
+      { "to.user": user._id },
+      { from: user._id }
+    ]
+  });
+  if (!email) return res.status(404).json({ message: "Email not found" });
+
+  const index = Number(idx);
+  const att = Array.isArray(email.attachments) ? email.attachments[index] : null;
+  if (!att) return res.status(404).json({ message: "Attachment not found" });
+  const url = att.cloudinaryUrl;
+  if (!url) return res.status(400).json({ message: "Attachment URL missing" });
+
+  const name = att.fileName || att.originalName || `attachment-${index+1}`;
+  try {
+    const response = await fetch(url, { redirect: "follow" });
+    if (!response.ok || !response.body) {
+      return res.status(502).json({ message: "Failed to fetch attachment" });
+    }
+    res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
+    res.setHeader("Content-Type", att.mimeType || response.headers.get("content-type") || "application/octet-stream");
+
+    const nodeStream = Readable.fromWeb(response.body);
+    nodeStream.pipe(res);
+  } catch (e) {
+    console.error("Download proxy error:", e.message);
+    return res.status(500).json({ message: "Download failed" });
+  }
+});
+
+export { sendEmail, showEmailList, getEmailById, markEmailRead, moveToTrash, bulkMoveToTrash, deletePermanently, toggleStarred, toggleArchive, saveDraft, downloadAttachment };
