@@ -72,16 +72,19 @@ const SigninPage = ({ isDark }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [errors, setErrors] = useState({ email: "", password: "" });
 
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error("Please enter both email and password.");
-      return;
-    }
+    const nextErrors = { email: "", password: "" };
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) nextErrors.email = "Enter a valid email address.";
+    if (!password || password.length < 8) nextErrors.password = "Password must be at least 8 characters.";
+    setErrors(nextErrors);
+    if (nextErrors.email || nextErrors.password) return;
 
     try {
       setLoading(true);
@@ -162,6 +165,7 @@ const SigninPage = ({ isDark }) => {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
               />
+              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
             </div>
             <div className="relative ">
               <label className={`block mb-2 ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`} htmlFor="password">
@@ -176,6 +180,7 @@ const SigninPage = ({ isDark }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
               />
+              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
               <button
                 type="button"
                 className="absolute top-10 right-5 p-1 focus:outline-none"

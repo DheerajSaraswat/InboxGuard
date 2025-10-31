@@ -22,6 +22,8 @@ import { toggleTheme } from "../redux/slices/themeSlice";
 import { showEmailLists } from "../apiRequests/showEmailLists";
 import { getAuth } from "firebase/auth";
 import { useEmailFetch } from "../hooks/useEmailFetch";
+import { getEmailById } from "../apiRequests/getEmailById";
+import MailDetail from "../components/MailDetail";
 
 export default function StarredPage() {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -34,6 +36,29 @@ export default function StarredPage() {
 
   // Use the custom hook for email fetching
   const { emails, isLoadingEmails, updateEmail } = useEmailFetch('starred');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedEmail, setSelectedEmail] = useState(null);
+
+  const normalize = (s = "") => String(s || "").toLowerCase();
+  const matchesQuery = (email) => {
+    if (!searchQuery) return true;
+    const q = normalize(searchQuery);
+    const subject = normalize(email.subject);
+    const fromUser = email.from || {};
+    const toUser = (email.to && email.to[0] && email.to[0].user) || {};
+    const fromUsername = normalize(fromUser.username);
+    const fromFullname = normalize(fromUser.fullname);
+    const toUsername = normalize(toUser.username);
+    const toFullname = normalize(toUser.fullname);
+    return (
+      subject.includes(q) ||
+      fromUsername.includes(q) ||
+      fromFullname.includes(q) ||
+      toUsername.includes(q) ||
+      toFullname.includes(q)
+    );
+  };
+  const filteredEmails = emails.filter(matchesQuery);
 
   useEffect(() => {
     if (!user) {
@@ -67,23 +92,7 @@ export default function StarredPage() {
 
   if (!user) return null;
 
-  if (isLoadingEmails) {
-    return (
-      <div
-        className={`flex min-h-screen h-screen items-center justify-center transition-colors duration-300 ${
-          isDark ? "bg-[#18181b] text-[#f3f4f6]" : "bg-[#fafbfc] text-[#111]"
-        }`}
-        style={{
-          fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="animate-spin h-6 w-6 rounded-full border-2 border-current border-t-transparent" />
-          <span className="text-lg font-medium">Loading starred emails…</span>
-        </div>
-      </div>
-    );
-  }
+  // Avoid full-screen loader; show inline skeletons instead
 
   return (
     <div
@@ -122,6 +131,8 @@ export default function StarredPage() {
                     fontFamily:
                       'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
                   }}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
@@ -247,7 +258,17 @@ export default function StarredPage() {
                   : "bg-[#F3F6FA]"
               }`}
             >
-              {emails.length === 0 ? (
+              {isLoadingEmails ? (
+                <div className="p-6 space-y-4">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className={`rounded-xl ${isDark ? 'bg-[#232326]' : 'bg-white'} border ${isDark ? 'border-[#2E2E2E]' : 'border-[#e5e7eb]'} p-4 animate-pulse`}>
+                      <div className="h-4 w-1/3 bg-gray-300/50 rounded mb-2"></div>
+                      <div className="h-3 w-2/3 bg-gray-300/40 rounded mb-1"></div>
+                      <div className="h-3 w-1/2 bg-gray-300/30 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredEmails.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-8">
                   <Star className="w-16 h-16 text-gray-400 mb-4" />
                   <h3 className="text-xl font-semibold text-gray-500 mb-2">No starred emails</h3>
@@ -256,11 +277,24 @@ export default function StarredPage() {
               ) : (
                 <MailCards
                   isDark={isDark}
-                  emails={emails}
+                  emails={filteredEmails}
                   setSelectedEmail={(email) => {
-                    navigate(`/user/u0/email/${email._id}`);
+                    (async () => {
+                      try {
+                        const full = await getEmailById(email._id);
+                        setSelectedEmail(full);
+                      } catch {}
+                    })();
                   }}
                   onEmailUpdate={updateEmail}
+                />
+              )}
+              {selectedEmail && (
+                <MailDetail
+                  email={selectedEmail}
+                  isDark={isDark}
+                  onBack={() => setSelectedEmail(null)}
+                  onDelete={() => setSelectedEmail(null)}
                 />
               )}
             </div>

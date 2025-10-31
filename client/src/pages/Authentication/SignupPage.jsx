@@ -46,18 +46,17 @@ const SignupPage = ({ isDark }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [errors, setErrors] = useState({ email: "", password: "", confirm: "" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !firstName || !lastName || !password || !confirmPassword) {
-      toast.error("Please fill in all fields.");
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      toast.error("Password and Confirm Password must match.");
-      return;
-    }
+    const nextErrors = { email: "", password: "", confirm: "" };
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) nextErrors.email = "Enter a valid email address.";
+    if (!password || password.length < 8) nextErrors.password = "Password must be at least 8 characters.";
+    if (password !== confirmPassword) nextErrors.confirm = "Passwords do not match.";
+    setErrors(nextErrors);
+    if (nextErrors.email || nextErrors.password || nextErrors.confirm) return;
 
     try {
       setLoading(true);
@@ -107,6 +106,7 @@ const SignupPage = ({ isDark }) => {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
               />
+              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
             </div>
             <div className="flex gap-4">
               <div className="w-1/2">
@@ -154,6 +154,7 @@ const SignupPage = ({ isDark }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
               />
+              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
               <button
                 type="button"
                 className="absolute top-10 right-4 p-1 focus:outline-none"
@@ -180,6 +181,7 @@ const SignupPage = ({ isDark }) => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
               />
+              {errors.confirm && <p className="text-red-500 text-sm mt-1">{errors.confirm}</p>}
               <button
                 type="button"
                 className="absolute top-10 right-4 p-1 focus:outline-none"

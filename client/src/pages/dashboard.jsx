@@ -39,6 +39,28 @@ export default function Dashboard() {
 
   // Use the custom hook for email fetching
   const { emails, isLoadingEmails, updateEmail, removeEmail } = useEmailFetch('inbox');
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const normalize = (s = "") => String(s || "").toLowerCase();
+  const matchesQuery = (email) => {
+    if (!searchQuery) return true;
+    const q = normalize(searchQuery);
+    const subject = normalize(email.subject);
+    const fromUser = email.from || {};
+    const toUser = (email.to && email.to[0] && email.to[0].user) || {};
+    const fromUsername = normalize(fromUser.username);
+    const fromFullname = normalize(fromUser.fullname);
+    const toUsername = normalize(toUser.username);
+    const toFullname = normalize(toUser.fullname);
+    return (
+      subject.includes(q) ||
+      fromUsername.includes(q) ||
+      fromFullname.includes(q) ||
+      toUsername.includes(q) ||
+      toFullname.includes(q)
+    );
+  };
+  const filteredEmails = emails.filter(matchesQuery);
 
   useEffect(() => {
     if (!user) {
@@ -131,6 +153,8 @@ export default function Dashboard() {
                     fontFamily:
                       'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
                   }}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
@@ -258,16 +282,27 @@ export default function Dashboard() {
               >
                 <MailCards
                   isDark={isDark}
-                  emails={emails}
+                  emails={filteredEmails}
                   setSelectedEmail={(email) => {
-                    // optimistically mark read in UI
-                    updateEmail(email._id, {
-                      to: [{ ...(email.to?.[0] || {}), readAt: new Date().toISOString() }]
-                    });
-                    navigate(`/user/u0/email/${email._id}`);
+                    (async () => {
+                      try {
+                        // optimistically mark read in UI
+                        updateEmail(email._id, {
+                          to: [{ ...(email.to?.[0] || {}), readAt: new Date().toISOString() }]
+                        });
+                        const full = await getEmailById(email._id);
+                        setSelectedEmail(full);
+                      } catch {}
+                    })();
                   }}
                   onEmailUpdate={updateEmail}
                 />
+                {filteredEmails.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                    <span className="text-xl font-semibold text-gray-500 mb-2">No results</span>
+                    <p className="text-gray-400">Try a different subject or name</p>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

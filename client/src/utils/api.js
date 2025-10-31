@@ -2,8 +2,9 @@ import axios from "axios";
 import { getAuth } from "firebase/auth";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000/api", // your backend
-  withCredentials: true
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
+  withCredentials: true,
+  timeout: 20000,
 });
 
 api.interceptors.request.use(async (config) => {

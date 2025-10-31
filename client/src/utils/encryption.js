@@ -79,23 +79,37 @@ export async function encryptEmailAndAttachments({ subject, htmlBody, attachment
     aesKey
   );
 
-  // 3) Encrypt attachments and upload to Cloudinary
+  // 3) Handle attachments: upload images/videos as-is; encrypt others then upload
   const encryptedUploads = [];
   for (const f of attachments || []) {
-    const { blob, ivB64, size } = await encryptFileWithAES(f.file, aesKey);
-    const fileName = `${f.name}.enc`;
-    const uploaded = await uploadToCloudinary({ blob, fileName });
-    encryptedUploads.push({
-      originalName: f.name,
-      originalSize: f.size,
-      mimeType: f.type,
-      encryptedSize: size,
-      ivB64,
-      url: uploaded.url,
-      publicId: uploaded.publicId,
-      resourceType: uploaded.resourceType,
-      format: uploaded.format,
-    });
+    const isMedia = /^image\//.test(f.type) || /^video\//.test(f.type);
+    if (isMedia) {
+      const uploaded = await uploadToCloudinary({ blob: f.file, fileName: f.name });
+      encryptedUploads.push({
+        originalName: f.name,
+        originalSize: f.size,
+        mimeType: f.type,
+        url: uploaded.url,
+        publicId: uploaded.publicId,
+        resourceType: uploaded.resourceType,
+        format: uploaded.format,
+      });
+    } else {
+      const { blob, ivB64, size } = await encryptFileWithAES(f.file, aesKey);
+      const fileName = `${f.name}.enc`;
+      const uploaded = await uploadToCloudinary({ blob, fileName });
+      encryptedUploads.push({
+        originalName: f.name,
+        originalSize: f.size,
+        mimeType: f.type,
+        encryptedSize: size,
+        ivB64,
+        url: uploaded.url,
+        publicId: uploaded.publicId,
+        resourceType: uploaded.resourceType,
+        format: uploaded.format,
+      });
+    }
   }
 
   // 4) Encrypt AES key for sender and each recipient who has a public key

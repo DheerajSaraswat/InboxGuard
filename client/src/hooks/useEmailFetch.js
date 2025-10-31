@@ -111,7 +111,8 @@ export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
     // Listen for token changes
     const unsubscribe = auth.onIdTokenChanged((u) => {
       if (u && isMountedRef.current && !isFetchingRef.current) {
-        debouncedRefresh(false);
+        // Silent refresh to avoid jarring loaders during route transitions
+        debouncedRefresh(true);
       }
     });
 

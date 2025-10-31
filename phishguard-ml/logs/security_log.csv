@@ -26,3 +26,19 @@ click on this link www.jauharaansari.com",phishing,0.768,API classification
 Congratulations on your winning Prize .
 
 click on this link www.jauharaansari.com",phishing,0.768,API classification
+2025-10-29T16:22:59.867024,email,"Dear Sir,
+
+I am writing to request a sick leave for two days, from October 30, 2025 to October 31, 2025.
+
+I am feeling unwell and do not believe I am fit to perform my duties effectively. I need this ",phishing,0.502,API classification
+2025-10-29T19:10:52.587440,email,"Dear ,
+
+I am writing to request a leave of absence for two days, from October 30th to October 31st.
+
+I will ensure that all my urgent tasks are completed before taking leave. If any urgent matters ari",legitimate,0.514,API classification
+2025-10-31T22:57:04.410855,email,"
+
+hey 
+",phishing,0.550,API classification
+2025-10-31T23:31:24.240444,email,Heyy,phishing,0.550,API classification
+2025-10-31T23:31:55.681983,email,Image here,phishing,0.550,API classification

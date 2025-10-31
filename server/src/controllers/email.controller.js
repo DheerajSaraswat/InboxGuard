@@ -46,12 +46,18 @@ const sendEmail = asyncHandler(async (req, res) => {
     .digest("hex");
 
   const mappedAttachments = (attachments || []).map((att) => {
-    const fileName = att.originalName ? `${att.originalName}.enc` : undefined;
-    const fileSize = typeof att.encryptedSize === "number" ? att.encryptedSize : undefined;
+    const isEncrypted = Boolean(att.ivB64) || typeof att.encryptedSize === "number";
+    const fileName = isEncrypted
+      ? (att.originalName ? `${att.originalName}.enc` : undefined)
+      : att.originalName;
+    const fileSize = isEncrypted
+      ? (typeof att.encryptedSize === "number" ? att.encryptedSize : undefined)
+      : (typeof att.originalSize === "number" ? att.originalSize : undefined);
     const mimeType = att.mimeType;
     const cloudinaryUrl = att.url;
-    // Deterministic checksum based on encrypted metadata (no need to re-download)
-    const checksumSource = `${att.url || ""}|${att.ivB64 || ""}|${att.encryptedSize || ""}`;
+    const checksumSource = isEncrypted
+      ? `${att.url || ""}|${att.ivB64 || ""}|${att.encryptedSize || ""}`
+      : `${att.url || ""}|${att.originalSize || ""}`;
     const checksum = crypto.createHash("sha256").update(checksumSource).digest("hex");
     return { fileName, fileSize, mimeType, cloudinaryUrl, ivB64: att.ivB64, checksum };
   });
@@ -208,6 +214,14 @@ const showEmailList = asyncHandler(async(req, res)=>{
       query = { "to.user": user._id, mailbox: "inbox", status: { $ne: "draft" } };
     } else if (mailbox === "sent") {
       query = { from: user._id, mailbox: "sent" };
+    } else if (mailbox === "trash") {
+      query = {
+        $or: [
+          { "to.user": user._id },
+          { from: user._id }
+        ],
+        mailbox: "trash"
+      };
     } else if (mailbox === "starred") {
       query = { 
         $or: [
@@ -236,8 +250,8 @@ const showEmailList = asyncHandler(async(req, res)=>{
     }
     
     const emails = await Email.find(query)
-      .populate("from", "email username displayImage")
-      .populate("to.user", "email username displayImage")
+      .populate("from", "email username fullname displayImage")
+      .populate("to.user", "email username fullname displayImage")
       .sort({ createdAt: -1 });
 
     // Provide decrypted preview while keeping full body encrypted at rest
@@ -395,11 +409,18 @@ const saveDraft = asyncHandler(async (req, res) => {
     .digest("hex");
 
   const mappedAttachments = (attachments || []).map((att) => {
-    const fileName = att.originalName ? `${att.originalName}.enc` : undefined;
-    const fileSize = typeof att.encryptedSize === "number" ? att.encryptedSize : undefined;
+    const isEncrypted = Boolean(att.ivB64) || typeof att.encryptedSize === "number";
+    const fileName = isEncrypted
+      ? (att.originalName ? `${att.originalName}.enc` : undefined)
+      : att.originalName;
+    const fileSize = isEncrypted
+      ? (typeof att.encryptedSize === "number" ? att.encryptedSize : undefined)
+      : (typeof att.originalSize === "number" ? att.originalSize : undefined);
     const mimeType = att.mimeType;
     const cloudinaryUrl = att.url;
-    const checksumSource = `${att.url || ""}|${att.ivB64 || ""}|${att.encryptedSize || ""}`;
+    const checksumSource = isEncrypted
+      ? `${att.url || ""}|${att.ivB64 || ""}|${att.encryptedSize || ""}`
+      : `${att.url || ""}|${att.originalSize || ""}`;
     const checksum = crypto.createHash("sha256").update(checksumSource).digest("hex");
     return { fileName, fileSize, mimeType, cloudinaryUrl, ivB64: att.ivB64, checksum };
   });

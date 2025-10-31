@@ -310,13 +310,16 @@ const EmailEditor = ({ isDark }) => {
           riskLevel: response.data.score > 75 ? "high" : response.data.score > 50 ? "medium" : "low",
         };
         
-        setScanResult({
-          riskLevel: phishingReport.riskLevel,
-          indicators: response.data.reasons?.map(reason => ({ description: reason })) || [{ description: "Phishing content detected by ML model" }],
-          phishingReport
-        });
-        setShowAlert(true);
-        return;
+        const derivedLevel = phishingReport.riskLevel;
+        if (derivedLevel === "high" || derivedLevel === "medium" || derivedLevel === "critical") {
+          setScanResult({
+            riskLevel: derivedLevel,
+            indicators: response.data.reasons?.map(reason => ({ description: reason })) || [{ description: "Phishing content detected by ML model" }],
+            phishingReport
+          });
+          setShowAlert(true);
+          return;
+        }
       }
       
       // No phishing detected - send email normally
@@ -369,7 +372,9 @@ const EmailEditor = ({ isDark }) => {
         phishingReport: formattedPhishingReport,
       };
       console.log("Sending email with payload:", payload);
-      const { data } = await api.post("/emails/sendMail", payload);
+      const { data } = await api.post("/emails/sendMail", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
       toast.success("Email sent");
       if (Array.isArray(data?.missingRecipients) && data.missingRecipients.length) {
         toast((t) => (
@@ -764,7 +769,7 @@ const EmailEditor = ({ isDark }) => {
                   </div>
 
                   {/* Editor area with drag/drop */}
-                  <div className="relative">
+                  <div className={`relative tiptap-editor ${isDark ? 'dark' : 'light'}`}>
                     <div
                       onDrop={handleDrop}
                       onDragOver={handleDragOver}
