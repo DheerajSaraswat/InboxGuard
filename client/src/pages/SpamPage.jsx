@@ -188,7 +188,7 @@ export default function SpamPage({ isDark: isDarkProp }) {
                 <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${isDark ? 'text-[#9aa0a6]' : 'text-[#bdbdbd]'}`} />
                 <input
                   placeholder="Search spam emails..."
-                  className={`pl-10 py-2 w-full rounded-lg border ${isDark ? 'bg-[#303134] border-[#5f6368] text-[#e8eaed]' : 'bg-white text-[#111] border-gray-300'}`}
+                  className={`pl-10 py-2 w-full rounded-lg border ${isDark ? 'bg-[#303134] border-[#5f6368] text-[#e8eaed] placeholder-[#9aa0a6]' : 'bg-white border-gray-300 text-[#111] placeholder-gray-400'}`}
                   style={{
                     fontSize: "1rem",
                     fontFamily:
