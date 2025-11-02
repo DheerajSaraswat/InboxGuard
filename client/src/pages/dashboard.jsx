@@ -147,7 +147,11 @@ export default function Dashboard() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#bdbdbd]" />
                 <input
                   placeholder="Search emails..."
-                  className="pl-10 py-2 w-full rounded-lg border bg-white text-[#111]"
+                  className={`pl-10 py-2 w-full rounded-lg border transition-colors ${
+                    isDark
+                      ? "bg-[#0f0f11] text-[#f3f4f6] placeholder:text-[#9ca3af] border-[#333] focus:border-[#4b5563]"
+                      : "bg-white text-[#111] border-[#e5e7eb] focus:border-[#cbd5e1]"
+                  }`}
                   style={{
                     fontSize: "1rem",
                     fontFamily:
@@ -253,62 +257,65 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-        <div className="flex-1 flex min-h-0">
-          {/* Gmail-style: Split view - Email list on left, detail on right when selected */}
-          <div
-            className={`flex flex-col min-h-0 transition-all duration-300 ${
-              selectedEmail ? "w-1/3 lg:w-2/5" : "flex-1"
-            } ${
-              isDark ? "bg-[#18181b]" : "bg-white"
-            } border-r border-gray-200`}
-          >
+        <div className="flex-1 flex border-l border-gray-200 min-h-0">
+          {/* Gmail-style: Inbox full width if no email selected, else split view */}
+          {!selectedEmail ? (
             <div
-              className={`p-4 border-b ${
-                isDark ? "bg-[#232326]" : "bg-white"
-              } border-gray-200`}
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-4xl font-bold">Inbox</h2>
-                <button className="bg-transparent p-2 rounded-full hover:bg-[#f3f4f6]">
-                  <MoreHorizontal className="w-4 h-4 text-[#111]" />
-                </button>
-              </div>
-            </div>
-            <div
-              className={`flex-1 overflow-y-auto ${
-                isDark
-                  ? "bg-gradient-to-b from-[#18181b] via-[#232326] to-[#18181b]"
-                  : "bg-[#F3F6FA]"
+              className={`flex-1 flex flex-col min-h-0 ${
+                isDark ? "bg-[#18181b]" : "bg-white"
               }`}
             >
-              <MailCards
-                isDark={isDark}
-                emails={filteredEmails}
-                setSelectedEmail={(email) => {
-                  (async () => {
-                    try {
-                      // optimistically mark read in UI
-                      updateEmail(email._id, {
-                        to: [{ ...(email.to?.[0] || {}), readAt: new Date().toISOString() }]
-                      });
-                      const full = await getEmailById(email._id);
-                      setSelectedEmail(full);
-                    } catch {}
-                  })();
-                }}
-                onEmailUpdate={updateEmail}
-              />
-              {filteredEmails.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                  <span className="text-xl font-semibold text-gray-500 mb-2">No results</span>
-                  <p className="text-gray-400">Try a different subject or name</p>
+              <div
+                className={`p-4 border-b ${
+                  isDark ? "bg-[#232326]" : "bg-white"
+                } border-gray-200`}
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-4xl font-bold">Inbox</h2>
+                  <button
+                    className={`bg-transparent p-2 rounded-full transition-colors ${
+                      isDark ? "hover:bg-[#18181b]" : "hover:bg-[#f3f4f6]"
+                    }`}
+                  >
+                    <MoreHorizontal
+                      className={`w-4 h-4 ${isDark ? "text-[#bdbdbd]" : "text-[#111]"}`}
+                    />
+                  </button>
                 </div>
-              )}
+              </div>
+              <div
+                className={`flex-1 overflow-y-auto ${
+                  isDark
+                    ? "bg-gradient-to-b from-[#18181b] via-[#232326] to-[#18181b]"
+                    : "bg-[#F3F6FA]"
+                }`}
+              >
+                <MailCards
+                  isDark={isDark}
+                  emails={filteredEmails}
+                  setSelectedEmail={(email) => {
+                    (async () => {
+                      try {
+                        // optimistically mark read in UI
+                        updateEmail(email._id, {
+                          to: [{ ...(email.to?.[0] || {}), readAt: new Date().toISOString() }]
+                        });
+                        const full = await getEmailById(email._id);
+                        setSelectedEmail(full);
+                      } catch {}
+                    })();
+                  }}
+                  onEmailUpdate={updateEmail}
+                />
+                {filteredEmails.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                    <span className="text-xl font-semibold text-gray-500 mb-2">No results</span>
+                    <p className="text-gray-400">Try a different subject or name</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-          
-          {/* Email Detail Panel */}
-          {selectedEmail && (
+          ) : (
             <MailDetail
               email={selectedEmail}
               isDark={isDark}
