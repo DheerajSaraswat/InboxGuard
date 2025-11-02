@@ -230,11 +230,14 @@ export default function StarredPage() {
             </div>
           </div>
         </div>
-        <div className="flex-1 flex border-l border-gray-200 min-h-0">
+        <div className="flex-1 flex min-h-0">
+          {/* Gmail-style: Split view - Email list on left, detail on right when selected */}
           <div
-            className={`flex-1 flex flex-col min-h-0 ${
+            className={`flex flex-col min-h-0 transition-all duration-300 ${
+              selectedEmail ? "w-1/3 lg:w-2/5" : "flex-1"
+            } ${
               isDark ? "bg-[#18181b]" : "bg-white"
-            }`}
+            } border-r border-gray-200`}
           >
             <div
               className={`p-4 border-b ${
@@ -289,16 +292,18 @@ export default function StarredPage() {
                   onEmailUpdate={updateEmail}
                 />
               )}
-              {selectedEmail && (
-                <MailDetail
-                  email={selectedEmail}
-                  isDark={isDark}
-                  onBack={() => setSelectedEmail(null)}
-                  onDelete={() => setSelectedEmail(null)}
-                />
-              )}
             </div>
           </div>
+          
+          {/* Email Detail Panel */}
+          {selectedEmail && (
+            <MailDetail
+              email={selectedEmail}
+              isDark={isDark}
+              onBack={() => setSelectedEmail(null)}
+              onDelete={() => setSelectedEmail(null)}
+            />
+          )}
         </div>
       </div>
     </div>

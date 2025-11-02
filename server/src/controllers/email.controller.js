@@ -1,11 +1,13 @@
 import { Email } from "../schema/email.schema.js";
 import { Notification } from "../schema/notification.schema.js";
 import { User } from "../schema/user.schema.js";
+import { PhishingReport } from "../schema/phishingReport.schema.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import crypto from "crypto";
 import admin from "../config/firebaseAdmin.js";
 import { encryptText, decryptText } from "../utils/encryption.js";
 import { Readable } from "stream";
+import axios from "axios";
 
 const sendEmail = asyncHandler(async (req, res) => {
   const { user_id, email: senderEmail } = req.user;
@@ -99,7 +101,71 @@ const sendEmail = asyncHandler(async (req, res) => {
     status: "sent",
   });
 
-  // Create copies for each recipient in their inbox
+  // Detect phishing on incoming emails using ML model
+  let phishingDetectionResult = null;
+  try {
+    // Extract plain text from body for ML model (strip HTML tags)
+    const plainTextBody = body ? body.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim() : '';
+    const emailText = `${subject || ''} ${plainTextBody}`.trim();
+    
+    if (emailText) {
+      // Call PhishGuard ML model API
+      const mlApiUrl = process.env.ML_API_URL || "http://localhost:8000";
+      try {
+        const mlResponse = await axios.post(
+          `${mlApiUrl}/classify`,
+          { email_text: emailText },
+          { timeout: 5000 }
+        );
+        
+        if (mlResponse.data && mlResponse.data.is_phishing) {
+          const confidence = mlResponse.data.confidence || 0.5;
+          let riskLevel = "low";
+          
+          if (confidence >= 0.8) {
+            riskLevel = "high";
+          } else if (confidence >= 0.6) {
+            riskLevel = "medium";
+          }
+          
+          phishingDetectionResult = {
+            riskScore: Math.round(confidence * 100),
+            riskLevel: riskLevel,
+            confidence: confidence,
+            isPhishing: true,
+            detectedPatterns: [`ML model detected phishing with ${Math.round(confidence * 100)}% confidence`]
+          };
+        }
+      } catch (mlError) {
+        console.error("ML model detection error:", mlError.message);
+        // Continue without ML detection if it fails
+      }
+    }
+  } catch (error) {
+    console.error("Phishing detection error:", error);
+  }
+
+  // Use ML detection result if available, otherwise use provided phishingReport
+  const finalSecurityAnalysis = phishingDetectionResult && phishingDetectionResult.isPhishing
+    ? {
+        riskScore: phishingDetectionResult.riskScore,
+        riskLevel: phishingDetectionResult.riskLevel,
+        indicators: phishingDetectionResult.detectedPatterns.map(desc => ({
+          type: "auto_detected",
+          severity: phishingDetectionResult.riskLevel,
+          description: desc,
+          detected: true,
+        })),
+        analyzedAt: new Date(),
+        bypassedByUser: false,
+      }
+    : formattedSecurityAnalysis;
+
+  // Determine mailbox based on risk level
+  const shouldGoToSpam = finalSecurityAnalysis && 
+    ["medium", "high", "critical"].includes(finalSecurityAnalysis.riskLevel);
+
+  // Create copies for each recipient in their inbox or spam
   for (const recipient of recipientUsers) {
     // find encrypted key by email if provided
     const wrapped = Array.isArray(encryptedKeys)
@@ -113,7 +179,7 @@ const sendEmail = asyncHandler(async (req, res) => {
       body: bodyCipherB64,
       bodyChecksum,
       attachments: mappedAttachments,
-      securityAnalysis: formattedSecurityAnalysis,
+      securityAnalysis: finalSecurityAnalysis,
       encryption: {
         algorithm: "AES-256-GCM",
         keyExchange: "RSA-2048",
@@ -121,9 +187,31 @@ const sendEmail = asyncHandler(async (req, res) => {
           ? [{ recipient: recipient._id, email: recipient.email, encryptedAESKey: wrapped.encryptedAESKey }]
           : [],
       },
-      mailbox: "inbox",
+      mailbox: shouldGoToSpam ? "spam" : "inbox",
       status: "delivered",
     });
+
+    // Create phishing report for medium+ threats
+    if (finalSecurityAnalysis && 
+        ["medium", "high", "critical"].includes(finalSecurityAnalysis.riskLevel)) {
+      try {
+        await PhishingReport.create({
+          reportedBy: recipient._id,
+          reportedAt: new Date(),
+          reportType: "auto-detected",
+          confidence: phishingDetectionResult?.confidence || 0.7,
+          email: inboxDoc._id,
+          analysis: {
+            riskScore: finalSecurityAnalysis.riskScore,
+            detectedPatterns: finalSecurityAnalysis.indicators.map(ind => ind.description),
+            verificationStatus: "pending",
+          },
+          status: "active",
+        });
+      } catch (reportError) {
+        console.error("Failed to create phishing report:", reportError);
+      }
+    }
 
     // Create in-app notification record
     await Notification.create({
@@ -240,6 +328,11 @@ const showEmailList = asyncHandler(async(req, res)=>{
         ],
         archived: true,
         mailbox: "archive"
+      };
+    } else if (mailbox === "spam") {
+      query = { 
+        "to.user": user._id,
+        mailbox: "spam"
       };
     } else if (mailbox === "drafts") {
       query = { from: user._id, status: "draft" };

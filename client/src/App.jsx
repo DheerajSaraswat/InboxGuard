@@ -15,6 +15,7 @@ import TrashPage from "./pages/TrashPage.jsx";
 import StarredPage from "./pages/StarredPage.jsx";
 import ArchivePage from "./pages/ArchivePage.jsx";
 import SentPage from "./pages/SentPage.jsx";
+import SpamPage from "./pages/SpamPage.jsx";
 import { useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 import { onMessageListener, requestForToken } from "./common/firebase.jsx";
@@ -105,6 +106,7 @@ function App() {
         <Route path="/sent" element={<SentPage isDark={isDark} />} />
         <Route path="/starred" element={<StarredPage isDark={isDark} />} />
         <Route path="/archive" element={<ArchivePage isDark={isDark} />} />
+        <Route path="/spam" element={<SpamPage isDark={isDark} />} />
         <Route path="/trash" element={<TrashPage isDark={isDark} />} />
       </Routes>
     </div>

@@ -61,8 +61,8 @@ export default function MailCards({ isDark, emails = [], setSelectedEmail, isTra
               <span className={`text-base ${isDark ? 'text-gray-300' : 'text-gray-500'} truncate`} style={{display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '320px'}}>{email.bodyPreview || ''}</span>
             </div>
           </div>
-          <div className=" flex ml-auto flex-col gap-2">
-            <div className="flex flex-col justify-between ml-auto">
+          <div className="flex ml-auto flex-col gap-2 min-w-[140px] items-end">
+            <div className="flex flex-col justify-between items-end gap-2">
               {/* Action buttons */}
               {!isTrashMode && (
                 <div className="flex gap-2 mb-2">
@@ -92,13 +92,13 @@ export default function MailCards({ isDark, emails = [], setSelectedEmail, isTra
               )}
               {/* Unread indicator */}
               {(!email.to?.[0]?.readAt) && (
-                <span className="ml-auto bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs">New</span>
+                <span className="bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs whitespace-nowrap">New</span>
               )}
               {(() => {
                 const level = String(email.securityAnalysis?.riskLevel || '').toLowerCase();
                 if (!level || level === 'low' || level === 'minimal' || level === 'safe') return null;
                 return (
-                <span className={`px-4 py-2 w-40 rounded-lg text-sm font-bold flex items-center gap-2 mb-3 shadow-lg ${
+                <span className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg whitespace-nowrap ${
                   level === 'high' || level === 'critical'
                     ? 'bg-[#E50914] text-white'
                     : level === 'medium'
@@ -111,8 +111,10 @@ export default function MailCards({ isDark, emails = [], setSelectedEmail, isTra
                 );
               })()}
             </div>
-            <div className="flex ml-auto justify-end mt-auto">
-              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{new Date(email.createdAt).toLocaleString()}</span>
+            <div className="flex justify-end mt-auto">
+              <span className={`text-sm whitespace-nowrap ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {new Date(email.createdAt).toLocaleDateString()}
+              </span>
             </div>
           </div>
         </div>

@@ -45,3 +45,16 @@ hey
 2025-10-31T23:40:48.010673,email,"Hey,
 wassup",phishing,0.550,API classification
 2025-10-31T23:44:05.194171,email,Ott,phishing,0.550,API classification
+2025-10-31T23:54:26.632783,email,Aheryp,phishing,0.550,API classification
+2025-11-01T00:19:07.497175,email,"Congrats, You won a lufetime prize of BMW car
+Click on this link: https://www.prIZe.com//",phishing,0.708,API classification
+2025-11-03T01:00:56.162043,email,"Hey,
+
+We are glad to inform that you have been selected as our winner of our grand prize of 1 lac rupees.
+We have provided you a link, go there and fill all the details that are required.
+Here's the l",phishing,0.641,API classification
+2025-11-03T01:03:26.338626,email,"Hey,
+
+We are glad to inform that you have been selected as our winner of our grand prize of 1 lac rupees.
+We have provided you a link, go there and fill all the details that are required.
+Here's the l",phishing,0.641,API classification

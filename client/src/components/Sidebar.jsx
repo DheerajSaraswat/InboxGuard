@@ -10,6 +10,7 @@ import {
   Archive,
   Trash2,
   Settings,
+  AlertTriangle,
 } from "lucide-react";
 import logo from "../assets/LightThemeLogo.png";
 import { Link } from "react-router-dom";
@@ -24,6 +25,7 @@ export default function Sidebar({ isDark }) {
   const location = useLocation();
   const [usage, setUsage] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [spamCount, setSpamCount] = useState(0);
 
   // Helper function to determine if a route is active
   const isActiveRoute = (path) => {
@@ -42,24 +44,31 @@ export default function Sidebar({ isDark }) {
     })();
   }, []);
 
-  // Fetch unread count periodically
+  // Fetch unread count and spam count periodically
   useEffect(() => {
     let isMounted = true;
     let hasFetched = false;
     
-    const fetchUnreadCount = async () => {
+    const fetchCounts = async () => {
       if (!isMounted) return;
       
       try {
-        const res = await api.get("/emails/emailList?mailbox=inbox");
+        const [inboxRes, spamRes] = await Promise.all([
+          api.get("/emails/emailList?mailbox=inbox"),
+          api.get("/emails/emailList?mailbox=spam").catch(() => ({ data: { emails: [] } }))
+        ]);
         if (!isMounted) return;
         
-        const emails = res.data?.emails || [];
-        const unread = emails.filter(email => !email.to?.[0]?.readAt).length;
+        const inboxEmails = inboxRes.data?.emails || [];
+        const unread = inboxEmails.filter(email => !email.to?.[0]?.readAt).length;
         setUnreadCount(unread);
+        
+        const spamEmails = spamRes.data?.emails || [];
+        const spam = spamEmails.filter(e => e.securityAnalysis?.riskLevel && ['medium', 'high', 'critical'].includes(e.securityAnalysis.riskLevel)).length;
+        setSpamCount(spam);
       } catch (error) {
         if (isMounted) {
-          console.error("Failed to fetch unread count:", error);
+          console.error("Failed to fetch counts:", error);
         }
       }
     };
@@ -67,14 +76,14 @@ export default function Sidebar({ isDark }) {
     // Only fetch after initial mount delay to avoid race conditions
     const timeout = setTimeout(() => {
       if (isMounted && !hasFetched) {
-        fetchUnreadCount();
+        fetchCounts();
         hasFetched = true;
       }
     }, 1000);
     
     const interval = setInterval(() => {
       if (isMounted) {
-        fetchUnreadCount();
+        fetchCounts();
       }
     }, 45000); // Check every 45 seconds to avoid quota issues
     
@@ -218,6 +227,31 @@ export default function Sidebar({ isDark }) {
               } transition`}
             >
               <Archive className="w-4 h-4" /> Archive
+            </button>
+            <button
+              onClick={() => navigate('/spam')}
+              className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
+                isActiveRoute('/spam')
+                  ? isDark
+                    ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
+                    : "bg-gray-200 text-[#111] font-semibold"
+                  : isDark
+                  ? "hover:bg-[#232326]/80 text-[#f3f4f6]"
+                  : "hover:bg-[#f3f4f6] text-[#111]"
+              } transition`}
+            >
+              <AlertTriangle className="w-4 h-4" /> Spam
+              {spamCount > 0 && (
+                <span
+                  className={`ml-auto ${
+                    isDark
+                      ? "bg-red-600 text-white"
+                      : "bg-red-500 text-white"
+                  } text-xs px-2 py-1 rounded-full font-bold`}
+                >
+                  {spamCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => navigate('/trash')}
