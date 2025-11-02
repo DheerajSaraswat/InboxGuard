@@ -212,7 +212,15 @@ export default function Sidebar({ isDark }) {
               } transition`}
             >
               <FileText className="w-4 h-4" /> Drafts
-              <span className="ml-auto bg-[#e5e7eb] text-xs px-2 py-1 rounded-full text-[#111]">{draftCount}</span>
+              {draftCount > 0 && (
+                <span className={`ml-auto text-xs px-2 py-1 rounded-full font-bold ${
+                  isDark 
+                    ? "bg-blue-600 text-white" 
+                    : "bg-[#e5e7eb] text-[#111]"
+                }`}>
+                  {draftCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => navigate('/archive')}

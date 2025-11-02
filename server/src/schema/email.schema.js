@@ -46,22 +46,22 @@ const EmailSchema = new Schema({
   },
 
   securityAnalysis: {
-    riskScore: Number,
-    riskLevel: {
-      type: String,
-      enum: ["safe", "low", "medium", "high", "critical"],
-    },
-    indicators: [
-      {
-        type: String,
-        severity: String,
-        description: String,
-        detected: Boolean,
-      },
-    ],
-    analyzedAt: Date,
-    bypassedByUser: Boolean,
+  riskScore: Number,
+  riskLevel: {
+    type: String,
+    enum: ["safe", "low", "medium", "high", "critical"],
   },
+  indicators: [
+    {
+      indicatorType: String,   // renamed to avoid confusion with Mongoose's `type`
+      severity: String,
+      description: String,
+      detected: Boolean,
+    },
+  ],
+  analyzedAt: Date,
+  bypassedByUser: Boolean,
+},
 
   threadId: { type: String }, // for grouping emails
   mailbox: {

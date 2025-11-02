@@ -179,8 +179,8 @@ export default function SpamPage({ isDark: isDarkProp }) {
       <div className="flex-1 flex flex-col min-h-0">
         <div
           className={`border-b p-4 ${
-            isDark ? "bg-[#232326]" : "bg-white"
-          } border-gray-200`}
+            isDark ? "bg-[#232326] border-[#3c4043]" : "bg-white border-gray-200"
+          }`}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 flex-1">
@@ -299,13 +299,13 @@ export default function SpamPage({ isDark: isDarkProp }) {
             className={`flex flex-col min-h-0 transition-all duration-300 ${
               selectedEmail ? "w-1/3 lg:w-2/5" : "flex-1"
             } ${
-              isDark ? "bg-[#18181b]" : "bg-white"
-            } border-r border-gray-200`}
+              isDark ? "bg-[#18181b] border-[#3c4043]" : "bg-white border-gray-200"
+            } border-r`}
           >
             <div
               className={`p-4 border-b ${
-                isDark ? "bg-[#232326]" : "bg-white"
-              } border-gray-200`}
+                isDark ? "bg-[#232326] border-[#3c4043]" : "bg-white border-gray-200"
+              }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -326,8 +326,10 @@ export default function SpamPage({ isDark: isDarkProp }) {
                       Empty Spam
                     </button>
                   )}
-                  <button className="bg-transparent p-2 rounded-full hover:bg-[#f3f4f6]">
-                    <MoreHorizontal className="w-4 h-4 text-[#111]" />
+                  <button className={`bg-transparent p-2 rounded-full transition-colors ${
+                    isDark ? "hover:bg-[#303134]" : "hover:bg-[#f3f4f6]"
+                  }`}>
+                    <MoreHorizontal className={`w-4 h-4 ${isDark ? "text-[#e8eaed]" : "text-[#111]"}`} />
                   </button>
                 </div>
               </div>

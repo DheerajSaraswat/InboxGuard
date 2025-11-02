@@ -54,3 +54,19 @@ Dear [Recipient Name],
 We are thrilled to inform you that you have won a prize!
 
 [Clearly state what they won. Be specific. For example: ""You have won a",phishing,0.741,API classification
+2025-11-03T01:22:02.894910,email,See this video,phishing,0.550,API classification
+2025-11-03T02:37:13.736104,email,"Hey,
+
+We are glad to announce you our quiz winner that you took participated in.
+Being the winner you got the prize of 10,000 rupees.
+Click on this link to claim your prize: www.prixeClame,io
+
+Regards",phishing,0.736,API classification
+2025-11-03T02:48:13.585831,email,"Hey,
+
+We are glad to announce you our quiz winner that you took participated in.
+Being the winner you got the prize of 10,000 rupees.
+Click on this link to claim your prize: www.prixeClame,io
+
+Regards",phishing,0.736,API classification
+2025-11-03T02:48:14.127017,email,"jdjswdwlkdjwd Hey,We are glad to announce you our quiz winner that you took participated in.Being the winner you got the prize of 10,000 rupees.Click on this link to claim your prize: www.prixeClame,i",phishing,0.736,API classification
