@@ -145,10 +145,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 flex-1">
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#bdbdbd]" />
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${isDark ? 'text-[#9aa0a6]' : 'text-[#bdbdbd]'}`} />
                 <input
                   placeholder="Search emails..."
-                  className="pl-10 py-2 w-full rounded-lg border bg-white text-[#111]"
+                  className={`pl-10 py-2 w-full rounded-lg border ${isDark ? 'bg-[#303134] border-[#5f6368] text-[#e8eaed] placeholder-[#9aa0a6]' : 'bg-white border-gray-300 text-[#111] placeholder-gray-400'}`}
                   style={{
                     fontSize: "1rem",
                     fontFamily:
