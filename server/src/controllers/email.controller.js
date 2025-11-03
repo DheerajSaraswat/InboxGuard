@@ -11,14 +11,7 @@ import axios from "axios";
 
 const sendEmail = asyncHandler(async (req, res) => {
   const { user_id, email: senderEmail } = req.user;
-  const {
-    to,
-    subject,
-    body,
-    attachments = [],
-    phishingReport,
-    encryptedKeys = [],
-  } = req.body;
+  const { to, subject, body, attachments = [], phishingReport, encryptedKeys = [] } = req.body;
 
   if (!Array.isArray(to) || !subject) {
     return res
@@ -32,16 +25,15 @@ const sendEmail = asyncHandler(async (req, res) => {
   }
   // Resolve recipients by email string -> User
   const recipientUsers = await User.find({
-    $or: [{ platformMail: { $in: to } }, { email: { $in: to } }],
+    $or: [
+      { platformMail: { $in: to } },
+      { email: { $in: to } },
+    ],
   });
-  const foundEmails = new Set(
-    recipientUsers.map((u) => u.platformMail || u.email)
-  );
+  const foundEmails = new Set(recipientUsers.map((u) => u.platformMail || u.email));
   const missing = to.filter((e) => !foundEmails.has(e));
   if (!recipientUsers.length) {
-    return res
-      .status(400)
-      .json({ message: "No valid recipients found", missing });
+    return res.status(400).json({ message: "No valid recipients found", missing });
   }
 
   const toArray = recipientUsers.map((u) => ({ user: u._id }));
@@ -57,98 +49,49 @@ const sendEmail = asyncHandler(async (req, res) => {
     .digest("hex");
 
   const mappedAttachments = (attachments || []).map((att) => {
-    const isEncrypted =
-      Boolean(att.ivB64) || typeof att.encryptedSize === "number";
+    const isEncrypted = Boolean(att.ivB64) || typeof att.encryptedSize === "number";
     const fileName = isEncrypted
-      ? att.originalName
-        ? `${att.originalName}.enc`
-        : undefined
+      ? (att.originalName ? `${att.originalName}.enc` : undefined)
       : att.originalName;
     const fileSize = isEncrypted
-      ? typeof att.encryptedSize === "number"
-        ? att.encryptedSize
-        : undefined
-      : typeof att.originalSize === "number"
-      ? att.originalSize
-      : undefined;
+      ? (typeof att.encryptedSize === "number" ? att.encryptedSize : undefined)
+      : (typeof att.originalSize === "number" ? att.originalSize : undefined);
     const mimeType = att.mimeType;
     const cloudinaryUrl = att.url;
     const checksumSource = isEncrypted
       ? `${att.url || ""}|${att.ivB64 || ""}|${att.encryptedSize || ""}`
       : `${att.url || ""}|${att.originalSize || ""}`;
-    const checksum = crypto
-      .createHash("sha256")
-      .update(checksumSource)
-      .digest("hex");
-    return {
-      fileName,
-      fileSize,
-      mimeType,
-      cloudinaryUrl,
-      ivB64: att.ivB64,
-      checksum,
-      publicId: att.publicId,
-      resourceType: att.resourceType,
-      format: att.format,
-    };
+    const checksum = crypto.createHash("sha256").update(checksumSource).digest("hex");
+    return { fileName, fileSize, mimeType, cloudinaryUrl, ivB64: att.ivB64, checksum, publicId: att.publicId, resourceType: att.resourceType, format: att.format };
   });
 
   // Format phishing report for database storage
   let formattedSecurityAnalysis = undefined;
-  if (
-    phishingReport &&
-    typeof phishingReport === "object" &&
-    !Array.isArray(phishingReport)
-  ) {
-    // Ensure indicators is properly formatted as array of objects
-    let indicatorsArray = [];
-    if (Array.isArray(phishingReport.indicators)) {
-      indicatorsArray = phishingReport.indicators
-        .map((ind) => {
-          if (typeof ind === "object" && ind !== null && !Array.isArray(ind)) {
-            return {
-              // ✅ FIX: use primitive defaults (avoid String()/Boolean() wrappers)
-              type: ind.type || "auto_detected",
-              severity: ind.severity || phishingReport.riskLevel || "medium",
-              description: ind.description || "Phishing detected",
-              detected: ind.detected ?? true,
-            };
-          } else if (typeof ind === "string") {
-            return {
-              type: "auto_detected",
-              severity: phishingReport.riskLevel || "medium",
-              description: ind,
-              detected: true,
-            };
-          }
-          return null;
-        })
-        .filter(Boolean);
-    }
-
+  if (phishingReport && typeof phishingReport === 'object') {
     formattedSecurityAnalysis = {
-      riskScore: Number(phishingReport.riskScore) || 50,
-      // ✅ FIX: keep primitive value
+      riskScore: phishingReport.riskScore || 50,
       riskLevel: phishingReport.riskLevel || "medium",
-      indicators: indicatorsArray,
-      analyzedAt: phishingReport.analyzedAt
-        ? new Date(phishingReport.analyzedAt)
-        : new Date(),
-      // ✅ FIX: primitive boolean
-      bypassedByUser: !!phishingReport.bypassedByUser,
+      indicators: Array.isArray(phishingReport.indicators) ? phishingReport.indicators.map(ind => ({
+        type: ind.type || "auto_detected",
+        severity: ind.severity || phishingReport.riskLevel || "medium",
+        description: ind.description || "Phishing detected",
+        detected: ind.detected !== undefined ? ind.detected : true,
+      })) : [],
+      analyzedAt: phishingReport.analyzedAt || new Date(),
+      bypassedByUser: phishingReport.bypassedByUser || false,
     };
   }
 
-  // Persist email in sender's sent folder (store initial formattedSecurityAnalysis if present)
+  // Persist email in sender's sent folder
   const emailDoc = await Email.create({
-    messageId: crypto.randomUUID(),
+    messageId: crypto.randomUUID() ,
     from: fromUser._id,
     to: toArray,
     subject,
     body: bodyCipherB64,
     bodyChecksum,
     attachments: mappedAttachments,
-    securityAnalysis: formattedSecurityAnalysis, // store whatever was provided (safe-structured)
+    securityAnalysis: formattedSecurityAnalysis,
     encryption: {
       algorithm: "AES-256-GCM",
       keyExchange: "RSA-2048",
@@ -159,7 +102,6 @@ const sendEmail = asyncHandler(async (req, res) => {
   });
 
   // Detect phishing on incoming emails using ML model
-  // Note: If client already scanned and provided phishingReport, we skip server-side scan
   let phishingDetectionResult = null;
   try {
     // Extract plain text from body for ML model (strip HTML tags)
@@ -180,35 +122,27 @@ const sendEmail = asyncHandler(async (req, res) => {
           { email_text: emailText },
           { timeout: 5000 }
         );
-
+        
         if (mlResponse.data && mlResponse.data.is_phishing) {
           const confidence = mlResponse.data.confidence || 0.5;
           let riskLevel = "low";
-
+          
           if (confidence >= 0.8) {
             riskLevel = "high";
           } else if (confidence >= 0.6) {
             riskLevel = "medium";
           }
-
+          
           phishingDetectionResult = {
             riskScore: Math.round(confidence * 100),
             riskLevel: riskLevel,
             confidence: confidence,
             isPhishing: true,
-            detectedPatterns:
-              Array.isArray(mlResponse.data.reasons) &&
-              mlResponse.data.reasons.length
-                ? mlResponse.data.reasons.map(String)
-                : [
-                    `ML model detected phishing with ${Math.round(
-                      confidence * 100
-                    )}% confidence`,
-                  ],
+            detectedPatterns: [`ML model detected phishing with ${Math.round(confidence * 100)}% confidence`]
           };
         }
-      } catch(error){
-        console.error("ML phishing detection API error:", error.message);
+      }catch(error){
+        console.error("ML model API error:", error.message);
       }
     }
   } catch (error) {
@@ -313,111 +247,49 @@ const sendEmail = asyncHandler(async (req, res) => {
       finalSecurityAnalysis.indicators = validatedIndicators;
     }
   }
-
   // Determine mailbox based on risk level
-  const shouldGoToSpam =
-    finalSecurityAnalysis &&
+  const shouldGoToSpam = finalSecurityAnalysis && 
     ["medium", "high", "critical"].includes(finalSecurityAnalysis.riskLevel);
 
   // Create copies for each recipient in their inbox or spam
   for (const recipient of recipientUsers) {
     // find encrypted key by email if provided
     const wrapped = Array.isArray(encryptedKeys)
-      ? encryptedKeys.find(
-          (k) =>
-            (k?.email || "").toLowerCase() ===
-            String(recipient.email).toLowerCase()
-        )
+      ? encryptedKeys.find((k) => String(k.email).toLowerCase() === String(recipient.email).toLowerCase())
       : null;
-
-    // Prepare securityAnalysis for database - ensure it's a plain object
-    let securityAnalysisToSave = undefined;
-    if (finalSecurityAnalysis) {
-      // Build indicators array from scratch as plain objects - use object literal syntax
-      const plainIndicators = [];
-      if (
-        Array.isArray(finalSecurityAnalysis.indicators) &&
-        finalSecurityAnalysis.indicators.length > 0
-      ) {
-        for (const ind of finalSecurityAnalysis.indicators) {
-          if (typeof ind === "object" && ind !== null && !Array.isArray(ind)) {
-            // ✅ FIX: primitive assignments
-            const newIndicator = {
-              type: ind.type || "auto_detected",
-              severity:
-                ind.severity || finalSecurityAnalysis.riskLevel || "medium",
-              description: ind.description || "Phishing detected",
-              detected: ind.detected !== undefined ? !!ind.detected : true,
-            };
-            plainIndicators.push(newIndicator);
-          }
-        }
-      }
-
-      // Create securityAnalysis as a plain object
-      securityAnalysisToSave = {
-        riskScore: Number(finalSecurityAnalysis.riskScore) || 50,
-        // ✅ FIX: primitive
-        riskLevel: finalSecurityAnalysis.riskLevel || "medium",
-        indicators: plainIndicators,
-        analyzedAt:
-          finalSecurityAnalysis.analyzedAt instanceof Date
-            ? finalSecurityAnalysis.analyzedAt
-            : new Date(finalSecurityAnalysis.analyzedAt || Date.now()),
-        bypassedByUser: !!finalSecurityAnalysis.bypassedByUser,
-      };
-    }
-
-    // Create email document with proper structure
-    const emailData = {
-      messageId: crypto.randomUUID(),
+    const inboxDoc = await Email.create({
+      messageId: crypto.randomUUID() ,
       from: fromUser._id,
       to: [{ user: recipient._id, deliveryStatus: "delivered" }],
-      subject: subject,
+      subject,
       body: bodyCipherB64,
-      bodyChecksum: bodyChecksum,
+      bodyChecksum,
       attachments: mappedAttachments,
+      securityAnalysis: finalSecurityAnalysis,
       encryption: {
         algorithm: "AES-256-GCM",
         keyExchange: "RSA-2048",
         encryptedKeys: wrapped?.encryptedAESKey
-          ? [
-              {
-                recipient: recipient._id,
-                email: recipient.email,
-                encryptedAESKey: wrapped.encryptedAESKey,
-              },
-            ]
+          ? [{ recipient: recipient._id, email: recipient.email, encryptedAESKey: wrapped.encryptedAESKey }]
           : [],
       },
       mailbox: shouldGoToSpam ? "spam" : "inbox",
       status: "delivered",
-    };
-
-    // Only add securityAnalysis if it exists
-    if (securityAnalysisToSave) {
-      emailData.securityAnalysis = securityAnalysisToSave;
-    }
-
-    const inboxDoc = await Email.create(emailData);
+    });
 
     // Create phishing report for medium+ threats
-    if (
-      finalSecurityAnalysis &&
-      ["medium", "high", "critical"].includes(finalSecurityAnalysis.riskLevel)
-    ) {
+    if (finalSecurityAnalysis && 
+        ["medium", "high", "critical"].includes(finalSecurityAnalysis.riskLevel)) {
       try {
         await PhishingReport.create({
           reportedBy: recipient._id,
           reportedAt: new Date(),
           reportType: "auto-detected",
-          confidence: phishingDetectionResult?.confidence ?? 0.7,
+          confidence: phishingDetectionResult?.confidence || 0.7,
           email: inboxDoc._id,
           analysis: {
             riskScore: finalSecurityAnalysis.riskScore,
-            detectedPatterns: finalSecurityAnalysis.indicators.map(
-              (ind) => ind.description
-            ),
+            detectedPatterns: finalSecurityAnalysis.indicators.map(ind => ind.description),
             verificationStatus: "pending",
           },
           status: "active",
@@ -433,11 +305,7 @@ const sendEmail = asyncHandler(async (req, res) => {
       type: "email_received",
       title: `New email from ${fromUser.email}`,
       message: subject || "Encrypted message",
-      priority:
-        finalSecurityAnalysis?.riskLevel &&
-        ["high", "critical"].includes(finalSecurityAnalysis.riskLevel)
-          ? "high"
-          : "normal",
+      priority: phishingReport?.riskLevel && ["high","critical"].includes(phishingReport.riskLevel) ? "high" : "normal",
       data: { email: inboxDoc._id },
       channels: { inApp: { sent: true, read: false } },
       status: "pending",
@@ -505,12 +373,10 @@ const sendEmail = asyncHandler(async (req, res) => {
     console.error("FCM notify error:", e.message);
   }
 
-  return res
-    .status(201)
-    .json({ success: true, id: emailDoc._id, missingRecipients: missing });
+  return res.status(201).json({ success: true, id: emailDoc._id, missingRecipients: missing });
 });
 
-const showEmailList = asyncHandler(async (req, res) => {
+const showEmailList = asyncHandler(async(req, res)=>{
   const { user_id } = req.user;
   const { mailbox = "inbox" } = req.query;
   const user = await User.findOne({ firebaseUid: user_id });
@@ -520,46 +386,49 @@ const showEmailList = asyncHandler(async (req, res) => {
   try {
     let query = {};
     if (mailbox === "inbox") {
-      query = {
-        "to.user": user._id,
-        mailbox: "inbox",
-        status: { $ne: "draft" },
-      };
+      query = { "to.user": user._id, mailbox: "inbox", status: { $ne: "draft" } };
     } else if (mailbox === "sent") {
       query = { from: user._id, mailbox: "sent" };
     } else if (mailbox === "trash") {
       query = {
-        $or: [{ "to.user": user._id }, { from: user._id }],
-        mailbox: "trash",
+        $or: [
+          { "to.user": user._id },
+          { from: user._id }
+        ],
+        mailbox: "trash"
       };
     } else if (mailbox === "starred") {
-      query = {
-        $or: [{ "to.user": user._id }, { from: user._id }],
+      query = { 
+        $or: [
+          { "to.user": user._id },
+          { from: user._id }
+        ],
         starred: true,
-        mailbox: { $ne: "trash" },
+        mailbox: { $ne: "trash" }
       };
     } else if (mailbox === "archive") {
-      query = {
-        $or: [{ "to.user": user._id }, { from: user._id }],
+      query = { 
+        $or: [
+          { "to.user": user._id },
+          { from: user._id }
+        ],
         archived: true,
-        mailbox: "archive",
+        mailbox: "archive"
       };
     } else if (mailbox === "spam") {
-      query = {
+      query = { 
         "to.user": user._id,
-        mailbox: "spam",
+        mailbox: "spam"
       };
     } else if (mailbox === "drafts") {
       query = { from: user._id, status: "draft" };
     } else {
-      query = {
-        $or: [
-          { "to.user": user._id, mailbox: "inbox" },
-          { from: user._id, mailbox: "sent" },
-        ],
-      };
+      query = { $or: [
+        { "to.user": user._id, mailbox: "inbox" },
+        { from: user._id, mailbox: "sent" }
+      ]};
     }
-
+    
     const emails = await Email.find(query)
       .populate("from", "email username fullname displayImage")
       .populate("to.user", "email username fullname displayImage")
@@ -571,10 +440,7 @@ const showEmailList = asyncHandler(async (req, res) => {
       try {
         const decrypted = decryptText(obj.body);
         // strip HTML tags for preview
-        const plain = decrypted
-          .replace(/<[^>]*>/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
+        const plain = decrypted.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
         obj.bodyPreview = plain.slice(0, 200);
       } catch (e) {
         obj.bodyPreview = "";
@@ -587,11 +453,11 @@ const showEmailList = asyncHandler(async (req, res) => {
     return res.status(200).json({ success: true, emails: withPreviews });
   } catch (error) {
     console.log(error);
-    throw error;
+    throw error
   }
-});
+})
 
-const getEmailById = asyncHandler(async (req, res) => {
+const getEmailById = asyncHandler(async(req, res)=>{
   const { user_id } = req.user;
   const { id } = req.params;
   const user = await User.findOne({ firebaseUid: user_id });
@@ -601,30 +467,31 @@ const getEmailById = asyncHandler(async (req, res) => {
   try {
     const email = await Email.findOne({
       _id: id,
-      $or: [{ "to.user": user._id }, { from: user._id }],
+      $or: [
+        { "to.user": user._id },
+        { from: user._id }
+      ]
     })
-      .populate("from", "email username displayImage")
-      .populate("to.user", "email username displayImage");
-
+    .populate("from", "email username displayImage")
+    .populate("to.user", "email username displayImage");
+    
     if (!email) {
       return res.status(404).json({ message: "Email not found" });
     }
-
+    
     // Decrypt email body
     const decryptedBody = decryptText(email.body);
     const emailWithDecryptedBody = {
       ...email.toObject(),
-      body: decryptedBody,
+      body: decryptedBody
     };
-
-    return res
-      .status(200)
-      .json({ success: true, email: emailWithDecryptedBody });
+    
+    return res.status(200).json({ success: true, email: emailWithDecryptedBody });
   } catch (error) {
     console.log(error);
-    throw error;
+    throw error
   }
-});
+})
 
 const markEmailRead = asyncHandler(async (req, res) => {
   const { user_id } = req.user;
@@ -633,10 +500,7 @@ const markEmailRead = asyncHandler(async (req, res) => {
   if (!user) return res.status(404).json({ message: "User not found" });
   const email = await Email.findOne({ _id: id, "to.user": user._id });
   if (!email) return res.status(404).json({ message: "Email not found" });
-  await Email.updateOne(
-    { _id: id, "to.user": user._id },
-    { $set: { "to.$.readAt": new Date() } }
-  );
+  await Email.updateOne({ _id: id, "to.user": user._id }, { $set: { "to.$.readAt": new Date() } });
   return res.json({ success: true });
 });
 
@@ -645,10 +509,7 @@ const moveToTrash = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const user = await User.findOne({ firebaseUid: user_id });
   if (!user) return res.status(404).json({ message: "User not found" });
-  const email = await Email.findOne({
-    _id: id,
-    $or: [{ "to.user": user._id }, { from: user._id }],
-  });
+  const email = await Email.findOne({ _id: id, $or: [{ "to.user": user._id }, { from: user._id }] });
   if (!email) return res.status(404).json({ message: "Email not found" });
   email.mailbox = "trash";
   await email.save();
@@ -660,8 +521,7 @@ const bulkMoveToTrash = asyncHandler(async (req, res) => {
   const { ids = [] } = req.body || {};
   const user = await User.findOne({ firebaseUid: user_id });
   if (!user) return res.status(404).json({ message: "User not found" });
-  if (!Array.isArray(ids) || ids.length === 0)
-    return res.status(400).json({ message: "ids[] required" });
+  if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: "ids[] required" });
   await Email.updateMany(
     { _id: { $in: ids }, $or: [{ "to.user": user._id }, { from: user._id }] },
     { $set: { mailbox: "trash" } }
@@ -674,12 +534,8 @@ const deletePermanently = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const user = await User.findOne({ firebaseUid: user_id });
   if (!user) return res.status(404).json({ message: "User not found" });
-  const result = await Email.deleteOne({
-    _id: id,
-    $or: [{ "to.user": user._id }, { from: user._id }],
-  });
-  if (result.deletedCount === 0)
-    return res.status(404).json({ message: "Email not found" });
+  const result = await Email.deleteOne({ _id: id, $or: [{ "to.user": user._id }, { from: user._id }] });
+  if (result.deletedCount === 0) return res.status(404).json({ message: "Email not found" });
   return res.json({ success: true });
 });
 
@@ -688,16 +544,13 @@ const toggleStarred = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const user = await User.findOne({ firebaseUid: user_id });
   if (!user) return res.status(404).json({ message: "User not found" });
-
-  const email = await Email.findOne({
-    _id: id,
-    $or: [{ "to.user": user._id }, { from: user._id }],
-  });
+  
+  const email = await Email.findOne({ _id: id, $or: [{ "to.user": user._id }, { from: user._id }] });
   if (!email) return res.status(404).json({ message: "Email not found" });
-
+  
   email.starred = !email.starred;
   await email.save();
-
+  
   return res.json({ success: true, starred: email.starred });
 });
 
@@ -706,23 +559,19 @@ const toggleArchive = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const user = await User.findOne({ firebaseUid: user_id });
   if (!user) return res.status(404).json({ message: "User not found" });
-
-  const email = await Email.findOne({
-    _id: id,
-    $or: [{ "to.user": user._id }, { from: user._id }],
-  });
+  
+  const email = await Email.findOne({ _id: id, $or: [{ "to.user": user._id }, { from: user._id }] });
   if (!email) return res.status(404).json({ message: "Email not found" });
-
+  
   email.archived = !email.archived;
   if (email.archived) {
     email.mailbox = "archive";
   } else {
     // Restore to original mailbox (inbox or sent)
-    email.mailbox =
-      email.from.toString() === user._id.toString() ? "sent" : "inbox";
+    email.mailbox = email.from.toString() === user._id.toString() ? "sent" : "inbox";
   }
   await email.save();
-
+  
   return res.json({ success: true, archived: email.archived });
 });
 
@@ -740,40 +589,20 @@ const saveDraft = asyncHandler(async (req, res) => {
     .digest("hex");
 
   const mappedAttachments = (attachments || []).map((att) => {
-    const isEncrypted =
-      Boolean(att.ivB64) || typeof att.encryptedSize === "number";
+    const isEncrypted = Boolean(att.ivB64) || typeof att.encryptedSize === "number";
     const fileName = isEncrypted
-      ? att.originalName
-        ? `${att.originalName}.enc`
-        : undefined
+      ? (att.originalName ? `${att.originalName}.enc` : undefined)
       : att.originalName;
     const fileSize = isEncrypted
-      ? typeof att.encryptedSize === "number"
-        ? att.encryptedSize
-        : undefined
-      : typeof att.originalSize === "number"
-      ? att.originalSize
-      : undefined;
+      ? (typeof att.encryptedSize === "number" ? att.encryptedSize : undefined)
+      : (typeof att.originalSize === "number" ? att.originalSize : undefined);
     const mimeType = att.mimeType;
     const cloudinaryUrl = att.url;
     const checksumSource = isEncrypted
       ? `${att.url || ""}|${att.ivB64 || ""}|${att.encryptedSize || ""}`
       : `${att.url || ""}|${att.originalSize || ""}`;
-    const checksum = crypto
-      .createHash("sha256")
-      .update(checksumSource)
-      .digest("hex");
-    return {
-      fileName,
-      fileSize,
-      mimeType,
-      cloudinaryUrl,
-      ivB64: att.ivB64,
-      checksum,
-      publicId: att.publicId,
-      resourceType: att.resourceType,
-      format: att.format,
-    };
+    const checksum = crypto.createHash("sha256").update(checksumSource).digest("hex");
+    return { fileName, fileSize, mimeType, cloudinaryUrl, ivB64: att.ivB64, checksum, publicId: att.publicId, resourceType: att.resourceType, format: att.format };
   });
 
   const draftDoc = await Email.create({
@@ -804,31 +633,27 @@ const downloadAttachment = asyncHandler(async (req, res) => {
 
   const email = await Email.findOne({
     _id: id,
-    $or: [{ "to.user": user._id }, { from: user._id }],
+    $or: [
+      { "to.user": user._id },
+      { from: user._id }
+    ]
   });
   if (!email) return res.status(404).json({ message: "Email not found" });
 
   const index = Number(idx);
-  const att = Array.isArray(email.attachments)
-    ? email.attachments[index]
-    : null;
+  const att = Array.isArray(email.attachments) ? email.attachments[index] : null;
   if (!att) return res.status(404).json({ message: "Attachment not found" });
   const url = att.cloudinaryUrl;
   if (!url) return res.status(400).json({ message: "Attachment URL missing" });
 
-  const name = att.fileName || att.originalName || `attachment-${index + 1}`;
+  const name = att.fileName || att.originalName || `attachment-${index+1}`;
   try {
     const response = await fetch(url, { redirect: "follow" });
     if (!response.ok || !response.body) {
       return res.status(502).json({ message: "Failed to fetch attachment" });
     }
     res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
-    res.setHeader(
-      "Content-Type",
-      att.mimeType ||
-        response.headers.get("content-type") ||
-        "application/octet-stream"
-    );
+    res.setHeader("Content-Type", att.mimeType || response.headers.get("content-type") || "application/octet-stream");
 
     const nodeStream = Readable.fromWeb(response.body);
     nodeStream.pipe(res);
@@ -838,16 +663,4 @@ const downloadAttachment = asyncHandler(async (req, res) => {
   }
 });
 
-export {
-  sendEmail,
-  showEmailList,
-  getEmailById,
-  markEmailRead,
-  moveToTrash,
-  bulkMoveToTrash,
-  deletePermanently,
-  toggleStarred,
-  toggleArchive,
-  saveDraft,
-  downloadAttachment,
-};
+export { sendEmail, showEmailList, getEmailById, markEmailRead, moveToTrash, bulkMoveToTrash, deletePermanently, toggleStarred, toggleArchive, saveDraft, downloadAttachment };
