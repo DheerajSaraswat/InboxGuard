@@ -161,57 +161,6 @@ const sendEmail = asyncHandler(async (req, res) => {
   // Detect phishing on incoming emails using ML model
   // Note: If client already scanned and provided phishingReport, we skip server-side scan
   let phishingDetectionResult = null;
-<<<<<<< HEAD
-  
-  // Only run server-side ML scan if no phishingReport was provided by client
-  if (!phishingReport) {
-    try {
-      // Extract plain text from body for ML model (strip HTML tags)
-      const plainTextBody = body ? body.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim() : '';
-      const emailText = `${subject || ''} ${plainTextBody}`.trim();
-      
-      if (emailText) {
-        // Call PhishGuard ML model API - use 127.0.0.1 to match client URL
-        const mlApiUrl = process.env.ML_API_URL || "http://127.0.0.1:8000";
-        try {
-          const mlResponse = await axios.post(
-            `${mlApiUrl}/classify`,
-            { email_text: emailText },
-            { 
-              timeout: 5000,
-              validateStatus: (status) => status < 500 // Don't throw on 4xx, only 5xx
-            }
-          );
-          
-          if (mlResponse.status === 200 && mlResponse.data && mlResponse.data.is_phishing) {
-            const confidence = mlResponse.data.confidence || 0.5;
-            let riskLevel = "low";
-            
-            if (confidence >= 0.8) {
-              riskLevel = "high";
-            } else if (confidence >= 0.6) {
-              riskLevel = "medium";
-            }
-            
-            phishingDetectionResult = {
-              riskScore: Math.round(confidence * 100),
-              riskLevel: riskLevel,
-              confidence: confidence,
-              isPhishing: true,
-              detectedPatterns: [`ML model detected phishing with ${Math.round(confidence * 100)}% confidence`]
-            };
-          }
-        } catch (mlError) {
-          // Log error but don't fail email sending - ML scan is optional
-          if (mlError.response) {
-            console.error("ML model detection error:", mlError.response.status, mlError.response.statusText);
-          } else if (mlError.request) {
-            console.error("ML model detection error: No response received from ML service");
-          } else {
-            console.error("ML model detection error:", mlError.message);
-          }
-          // Continue without ML detection if it fails
-=======
   try {
     // Extract plain text from body for ML model (strip HTML tags)
     const plainTextBody = body
@@ -257,13 +206,14 @@ const sendEmail = asyncHandler(async (req, res) => {
                     )}% confidence`,
                   ],
           };
->>>>>>> 250aac936e5e018a4dc99ec5e34cce4f58b29bd9
         }
+      } catch(error){
+        console.error("ML phishing detection API error:", error.message);
       }
-    } catch (error) {
-      console.error("Phishing detection error:", error.message);
-      // Continue - don't block email sending if ML scan fails
     }
+  } catch (error) {
+    console.error("Phishing detection error:", error.message);
+    // Continue - don't block email sending if ML scan fails
   }
 
   // Use ML detection result if available, otherwise use provided phishingReport
@@ -364,19 +314,10 @@ const sendEmail = asyncHandler(async (req, res) => {
     }
   }
 
-<<<<<<< HEAD
-  // Determine mailbox - ALL phishing emails (any risk level) should go to spam
-  // Check if there's any phishing detection (from ML model or client scan)
-  const shouldGoToSpam = finalSecurityAnalysis && (
-    phishingDetectionResult?.isPhishing === true || // ML model detected phishing
-    formattedSecurityAnalysis !== undefined // Client detected phishing (user bypassed warning)
-  );
-=======
   // Determine mailbox based on risk level
   const shouldGoToSpam =
     finalSecurityAnalysis &&
     ["medium", "high", "critical"].includes(finalSecurityAnalysis.riskLevel);
->>>>>>> 250aac936e5e018a4dc99ec5e34cce4f58b29bd9
 
   // Create copies for each recipient in their inbox or spam
   for (const recipient of recipientUsers) {
