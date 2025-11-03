@@ -378,7 +378,7 @@ const sendEmail = asyncHandler(async (req, res) => {
 
 const showEmailList = asyncHandler(async(req, res)=>{
   const { user_id } = req.user;
-  const { mailbox = "inbox" } = req.query;
+  const { mailbox = "inbox", page = 1, limit = 20 } = req.query;
   const user = await User.findOne({ firebaseUid: user_id });
   if (!user) {
     return res.status(404).json({ message: "User not found" });
@@ -429,10 +429,18 @@ const showEmailList = asyncHandler(async(req, res)=>{
       ]};
     }
     
-    const emails = await Email.find(query)
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const perPage = Math.max(1, Math.min(100, parseInt(limit, 10) || 20));
+
+    const [total, emails] = await Promise.all([
+      Email.countDocuments(query),
+      Email.find(query)
       .populate("from", "email username fullname displayImage")
       .populate("to.user", "email username fullname displayImage")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * perPage)
+      .limit(perPage)
+    ]);
 
     // Provide decrypted preview while keeping full body encrypted at rest
     const withPreviews = emails.map((doc) => {
@@ -450,7 +458,7 @@ const showEmailList = asyncHandler(async(req, res)=>{
       return obj;
     });
 
-    return res.status(200).json({ success: true, emails: withPreviews });
+    return res.status(200).json({ success: true, emails: withPreviews, page: pageNum, total, totalPages: Math.ceil(total / perPage) });
   } catch (error) {
     console.log(error);
     throw error

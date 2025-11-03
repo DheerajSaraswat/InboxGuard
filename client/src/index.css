@@ -1,4 +1,26 @@
 @import "tailwindcss";
+/* Global scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #9aa0a6 transparent;
+}
+/* WebKit */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(153, 153, 153, 0.35);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+html.dark *::-webkit-scrollbar-thumb {
+  background-color: rgba(136, 144, 160, 0.35);
+}
 .ProseMirror:focus {
   outline: none !important;
   box-shadow: none !important;

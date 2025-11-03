@@ -215,7 +215,7 @@ const updateSecuritySettings = asyncHandler(async (req, res) => {
   }
 
   // Guard rails: Disallow changes to algorithms or non-user-configurable fields
-  if (encryption !== undefined || blacklist !== undefined || whitelist !== undefined || storage !== undefined) {
+  if (encryption !== undefined || storage !== undefined) {
     throw new ApiError(403, "Attempt to change restricted settings.");
   }
 
@@ -251,6 +251,18 @@ const updateSecuritySettings = asyncHandler(async (req, res) => {
     if (notifications.desktopNotifications !== undefined) {
       user.securitySettings.notifications.desktopNotifications = notifications.desktopNotifications;
     }
+  }
+
+  // Update block/allow lists (replace with provided entries)
+  if (Array.isArray(blacklist)) {
+    user.securitySettings.blacklist = blacklist
+      .filter((v) => typeof v === 'string' && v.trim().length > 0)
+      .map((v) => ({ type: v.includes('@') ? 'email' : 'domain', value: v.trim(), addedAt: new Date() }));
+  }
+  if (Array.isArray(whitelist)) {
+    user.securitySettings.whitelist = whitelist
+      .filter((v) => typeof v === 'string' && v.trim().length > 0)
+      .map((v) => ({ type: v.includes('@') ? 'email' : 'domain', value: v.trim(), addedAt: new Date() }));
   }
 
   user.updatedAt = new Date();

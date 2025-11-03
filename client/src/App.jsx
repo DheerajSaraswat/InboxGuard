@@ -106,6 +106,7 @@ function App() {
         <Route path="/sent" element={<SentPage isDark={isDark} />} />
         <Route path="/starred" element={<StarredPage isDark={isDark} />} />
         <Route path="/archive" element={<ArchivePage isDark={isDark} />} />
+        <Route path="/user/u0/spam" element={<SpamPage isDark={isDark} />} />
         <Route path="/spam" element={<SpamPage isDark={isDark} />} />
         <Route path="/trash" element={<TrashPage isDark={isDark} />} />
       </Routes>

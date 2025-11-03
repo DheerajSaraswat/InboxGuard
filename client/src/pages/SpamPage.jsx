@@ -35,7 +35,7 @@ export default function SpamPage({ isDark: isDarkProp }) {
   const isDark = typeof isDarkProp === 'boolean' ? isDarkProp : theme === "dark";
 
   // Use the custom hook for email fetching with spam mailbox
-  const { emails, isLoadingEmails, updateEmail, removeEmail } = useEmailFetch('spam');
+  const { emails, isLoadingEmails, updateEmail, removeEmail, page, setPage, totalPages, total } = useEmailFetch('spam', 30000, 1, 20);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEmail, setSelectedEmail] = useState(null);
 
@@ -178,7 +178,7 @@ export default function SpamPage({ isDark: isDarkProp }) {
       <Sidebar isDark={isDark} />
       <div className="flex-1 flex flex-col min-h-0">
         <div
-          className={`border-b p-4 ${
+          className={`border-b p-4 pl-12 md:pl-4 ${
             isDark ? "bg-[#232326] border-[#3c4043]" : "bg-white border-gray-200"
           }`}
         >
@@ -409,6 +409,14 @@ export default function SpamPage({ isDark: isDarkProp }) {
                       </div>
                     </div>
                   ))}
+                  {/* Pagination */}
+                  <div className="flex items-center justify-between mt-6">
+                    <div className={`${isDark? 'text-gray-400':'text-gray-600'} text-sm`}>Page {page} of {totalPages}</div>
+                    <div className="flex gap-2">
+                      <button disabled={page<=1} onClick={()=>setPage(page-1)} className={`px-3 py-1 rounded border ${isDark? 'bg-[#232326] border-[#3c4043] text-[#e8eaed] disabled:opacity-50':'bg-white border-gray-300 text-[#111] disabled:opacity-50'}`}>Prev</button>
+                      <button disabled={page>=totalPages} onClick={()=>setPage(page+1)} className={`px-3 py-1 rounded border ${isDark? 'bg-[#232326] border-[#3c4043] text-[#e8eaed] disabled:opacity-50':'bg-white border-gray-300 text-[#111] disabled:opacity-50'}`}>Next</button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

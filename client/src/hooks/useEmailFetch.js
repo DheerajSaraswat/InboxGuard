@@ -4,9 +4,12 @@ import { getAuth } from 'firebase/auth';
 import { showEmailLists } from '../apiRequests/showEmailLists';
 import toast from 'react-hot-toast';
 
-export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
+export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000, initialPage = 1, limit = 20) => {
   const [emails, setEmails] = useState([]);
   const [isLoadingEmails, setIsLoadingEmails] = useState(false);
+  const [page, setPage] = useState(initialPage);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const { user } = useSelector((state) => state.auth);
   
   const isMountedRef = useRef(true);
@@ -29,10 +32,10 @@ export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
         fetchTimeoutRef.current = null;
       }
       
-      const list = await showEmailLists(mailbox);
+      const result = await showEmailLists(mailbox, page, limit);
       
       if (isMountedRef.current) {
-        const newEmails = Array.isArray(list) ? list : [];
+        const newEmails = Array.isArray(result?.emails) ? result.emails : [];
         
         // Check for new emails (compare with previous state)
         if (prevEmailsCountRef.current > 0 && newEmails.length > prevEmailsCountRef.current) {
@@ -46,6 +49,8 @@ export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
         
         prevEmailsCountRef.current = newEmails.length;
         setEmails(newEmails);
+        setTotal(result?.total || 0);
+        setTotalPages(result?.totalPages || 1);
       }
     } catch (e) {
       console.error(`${mailbox} emails fetch error:`, e);
@@ -58,7 +63,7 @@ export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
       }
       isFetchingRef.current = false;
     }
-  }, [user, mailbox]);
+  }, [user, mailbox, page, limit]);
 
   const debouncedRefresh = useCallback((silent = false) => {
     if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
@@ -141,6 +146,10 @@ export const useEmailFetch = (mailbox = 'inbox', refreshInterval = 30000) => {
     fetchEmails: debouncedRefresh,
     updateEmail,
     removeEmail,
-    addEmail
+    addEmail,
+    page,
+    setPage,
+    totalPages,
+    total
   };
 };

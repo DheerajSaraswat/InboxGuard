@@ -16,6 +16,7 @@ export default function SentPage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -24,7 +25,7 @@ export default function SentPage() {
   const isDark = theme === "dark";
 
   // Use the custom hook for email fetching
-  const { emails, isLoadingEmails, updateEmail } = useEmailFetch('sent');
+  const { emails, isLoadingEmails, updateEmail, page, setPage, totalPages } = useEmailFetch('sent', 30000, 1, 20);
 
   useEffect(() => {
     if (!user) {
@@ -86,6 +87,21 @@ export default function SentPage() {
     );
   }
 
+  // Optional filtering by subject/from
+  const normalize = (s = "") => String(s || "").toLowerCase();
+  const filteredEmails = emails.filter((email) => {
+    if (!searchQuery) return true;
+    const q = normalize(searchQuery);
+    const subject = normalize(email.subject);
+    const fromUser = email.from || {};
+    return (
+      subject.includes(q) ||
+      normalize(fromUser.username).includes(q) ||
+      normalize(fromUser.fullname).includes(q) ||
+      normalize(fromUser.email).includes(q)
+    );
+  });
+
   return (
     <div
       className={`flex min-h-screen h-screen transition-colors duration-300 ${
@@ -98,7 +114,7 @@ export default function SentPage() {
       <Sidebar isDark={isDark} />
       <div className="flex-1 flex flex-col min-h-0">
         <div
-          className={`border-b p-4 ${
+          className={`border-b p-4 pl-12 md:pl-4 ${
             isDark ? "bg-[#232326]" : "bg-white"
           } border-gray-200`}
         >
@@ -247,7 +263,7 @@ export default function SentPage() {
                   : "bg-[#F3F6FA]"
               }`}
             >
-              {emails.length === 0 ? (
+              {filteredEmails.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-8">
                   <Send className="w-16 h-16 text-gray-400 mb-4" />
                   <h3 className="text-xl font-semibold text-gray-500 mb-2">No sent emails yet</h3>
@@ -256,11 +272,19 @@ export default function SentPage() {
               ) : (
                 <MailCards
                   isDark={isDark}
-                  emails={emails}
+                  emails={filteredEmails}
                   setSelectedEmail={handleEmailClick}
                   onEmailUpdate={updateEmail}
                 />
               )}
+              {/* Pagination */}
+              <div className="flex items-center justify-between mt-6 px-4 pb-4">
+                <div className={`${isDark? 'text-gray-400':'text-gray-600'} text-sm`}>Page {page} of {totalPages}</div>
+                <div className="flex gap-2">
+                  <button disabled={page<=1} onClick={()=>setPage(page-1)} className={`px-3 py-1 rounded border ${isDark? 'bg-[#232326] border-[#3c4043] text-[#e8eaed] disabled:opacity-50':'bg-white border-gray-300 text-[#111] disabled:opacity-50'}`}>Prev</button>
+                  <button disabled={page>=totalPages} onClick={()=>setPage(page+1)} className={`px-3 py-1 rounded border ${isDark? 'bg-[#232326] border-[#3c4043] text-[#e8eaed] disabled:opacity-50':'bg-white border-gray-300 text-[#111] disabled:opacity-50'}`}>Next</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -19,7 +19,14 @@ import api from "../utils/api";
 
 
 export default function Sidebar({ isDark }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("sidebar_open");
+      return saved === "true" ? true : false;
+    } catch {
+      return false;
+    }
+  });
   const draftCount = useSelector(state => state.draft.drafts.length);
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,6 +50,13 @@ export default function Sidebar({ isDark }) {
       } catch {}
     })();
   }, []);
+
+  // Persist sidebar open state across navigations (mobile UX)
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("sidebar_open", open ? "true" : "false");
+    } catch {}
+  }, [open]);
 
   // Fetch unread count and spam count periodically
   useEffect(() => {
@@ -237,9 +251,9 @@ export default function Sidebar({ isDark }) {
               <Archive className="w-4 h-4" /> Archive
             </button>
             <button
-              onClick={() => navigate('/spam')}
+              onClick={() => navigate('/user/u0/spam')}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isActiveRoute('/spam')
+                isActiveRoute('/user/u0/spam') || isActiveRoute('/spam')
                   ? isDark
                     ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
                     : "bg-gray-200 text-[#111] font-semibold"

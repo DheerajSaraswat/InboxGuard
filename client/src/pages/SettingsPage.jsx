@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { Shield, Bell, Save } from "lucide-react";
+import { Shield, Save, KeyRound, ListMinus, ListPlus } from "lucide-react";
+import { getAuth, updatePassword } from "firebase/auth";
 import toast from "react-hot-toast";
 import { getSecuritySettings, updateSecuritySettings } from "../apiRequests/profileApi";
 
@@ -11,17 +12,10 @@ export default function SettingsPage({ isDark }) {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [settings, setSettings] = useState({
-    phishingDetection: {
-      enabled: true,
-      sensitivity: "medium",
-    },
-    notifications: {
-      phishingAlerts: true,
-      emailNotifications: true,
-      desktopNotifications: false,
-    },
-  });
+  const [blacklistInput, setBlacklistInput] = useState("");
+  const [whitelistInput, setWhitelistInput] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     if (!user) {
@@ -33,17 +27,14 @@ export default function SettingsPage({ isDark }) {
       try {
         const res = await getSecuritySettings();
         if (mounted && res?.success) {
-          setSettings((prev) => ({
-            ...prev,
-            phishingDetection: {
-              ...prev.phishingDetection,
-              ...res.data.phishingDetection,
-            },
-            notifications: {
-              ...prev.notifications,
-              ...res.data.notifications,
-            },
-          }));
+          const bl = Array.isArray(res.data?.blacklist)
+            ? res.data.blacklist.map((i) => i.value).filter(Boolean)
+            : [];
+          const wl = Array.isArray(res.data?.whitelist)
+            ? res.data.whitelist.map((i) => i.value).filter(Boolean)
+            : [];
+          setBlacklistInput(bl.join(", "));
+          setWhitelistInput(wl.join(", "));
         }
       } catch (e) {
         toast.error("Failed to load settings");
@@ -56,34 +47,19 @@ export default function SettingsPage({ isDark }) {
     };
   }, [user, navigate]);
 
-  const handleToggle = (group, key) => (e) => {
-    const value = e.target.checked;
-    setSettings((prev) => ({
-      ...prev,
-      [group]: {
-        ...prev[group],
-        [key]: value,
-      },
-    }));
-  };
-
-  const handleSensitivity = (e) => {
-    const value = e.target.value;
-    setSettings((prev) => ({
-      ...prev,
-      phishingDetection: { ...prev.phishingDetection, sensitivity: value },
-    }));
+  const parseList = (text) => {
+    return text
+      .split(/[\n,;]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const payload = {
-        phishingDetection: {
-          enabled: settings.phishingDetection.enabled,
-          sensitivity: settings.phishingDetection.sensitivity,
-        },
-        notifications: { ...settings.notifications },
+        blacklist: parseList(blacklistInput),
+        whitelist: parseList(whitelistInput),
       };
       const res = await updateSecuritySettings(payload);
       if (res?.success) {
@@ -136,119 +112,36 @@ export default function SettingsPage({ isDark }) {
             {saving ? "Saving…" : "Save Changes"}
           </button>
         </div>
-
-        <div
-          className={`${
-            isDark ? "bg-[#141414] border-[#222]" : "bg-gray-50 border-gray-200"
-          } rounded-xl border p-6 mb-6`}
-        >
-          <h2 className="text-lg font-medium mb-4">Phishing Detection</h2>
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <p className="font-medium">Enable detection</p>
-              <p className="text-sm opacity-80">
-                Scan drafts for risky indicators before sending.
-              </p>
-            </div>
-            <label className="inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={settings.phishingDetection.enabled}
-                onChange={handleToggle("phishingDetection", "enabled")}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600 relative" />
-            </label>
-          </div>
-          <div className="mt-4">
-            <label className="block text-sm font-medium mb-1">
-              Sensitivity
-            </label>
-            <select
-              value={settings.phishingDetection.sensitivity}
-              onChange={handleSensitivity}
-              className={`${
-                isDark
-                  ? "bg-[#0B0B0B] border-[#222]"
-                  : "bg-white border-gray-300"
-              } border rounded-lg px-3 py-2`}
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-          <p className="text-xs opacity-70 mt-3">
-            Scanning algorithm is fixed by InboxGuard for consistency and
-            accuracy.
-          </p>
+        {/* Blocklist */}
+        <div className={`${isDark ? "bg-[#141414] border-[#222]" : "bg-gray-50 border-gray-200"} rounded-xl border p-6 mb-6`}>
+          <h2 className="text-lg font-medium mb-2 flex items-center gap-2"><ListMinus className="w-5 h-5"/> Blocklist</h2>
+          <p className={`text-sm mb-2 ${isDark?"text-gray-400":"text-gray-600"}`}>Enter emails or domains (comma or newline separated).</p>
+          <textarea rows={4} value={blacklistInput} onChange={(e)=>setBlacklistInput(e.target.value)} className={`w-full rounded-lg px-3 py-2 border ${isDark?"bg-[#0B0B0B] border-[#222]":"bg-white border-gray-300"}`} placeholder="spam@example.com, *.phish.com" />
         </div>
 
-        <div
-          className={`${
-            isDark ? "bg-[#141414] border-[#222]" : "bg-gray-50 border-gray-200"
-          } rounded-xl border p-6`}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Bell className="w-5 h-5" />
-            <h2 className="text-lg font-medium">Notifications</h2>
+        {/* Whitelist */}
+        <div className={`${isDark ? "bg-[#141414] border-[#222]" : "bg-gray-50 border-gray-200"} rounded-xl border p-6 mb-6`}>
+          <h2 className="text-lg font-medium mb-2 flex items-center gap-2"><ListPlus className="w-5 h-5"/> Whitelist</h2>
+          <p className={`text-sm mb-2 ${isDark?"text-gray-400":"text-gray-600"}`}>Allowed senders override phishing filters.</p>
+          <textarea rows={4} value={whitelistInput} onChange={(e)=>setWhitelistInput(e.target.value)} className={`w-full rounded-lg px-3 py-2 border ${isDark?"bg-[#0B0B0B] border-[#222]":"bg-white border-gray-300"}`} placeholder="partner@example.com, *.trusted.org" />
+        </div>
+
+        {/* Change Password */}
+        <div className={`${isDark ? "bg-[#141414] border-[#222]" : "bg-gray-50 border-gray-200"} rounded-xl border p-6`}>
+          <h2 className="text-lg font-medium mb-4 flex items-center gap-2"><KeyRound className="w-5 h-5"/> Change Password</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="password" value={newPassword} onChange={(e)=>setNewPassword(e.target.value)} placeholder="New password" className={`rounded-lg px-3 py-2 border ${isDark?"bg-[#0B0B0B] border-[#222]":"bg-white border-gray-300"}`} />
+            <input type="password" value={confirmPassword} onChange={(e)=>setConfirmPassword(e.target.value)} placeholder="Confirm new password" className={`rounded-lg px-3 py-2 border ${isDark?"bg-[#0B0B0B] border-[#222]":"bg-white border-gray-300"}`} />
           </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Phishing alerts</p>
-                <p className="text-sm opacity-80">
-                  Get alerted when risky content is detected.
-                </p>
-              </div>
-              <label className="inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={settings.notifications.phishingAlerts}
-                  onChange={handleToggle("notifications", "phishingAlerts")}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600 relative" />
-              </label>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Email notifications</p>
-                <p className="text-sm opacity-80">
-                  Receive updates about your InboxGuard account.
-                </p>
-              </div>
-              <label className="inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={settings.notifications.emailNotifications}
-                  onChange={handleToggle("notifications", "emailNotifications")}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600 relative" />
-              </label>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Desktop notifications</p>
-                <p className="text-sm opacity-80">
-                  Enable OS notifications on supported devices.
-                </p>
-              </div>
-              <label className="inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={settings.notifications.desktopNotifications}
-                  onChange={handleToggle(
-                    "notifications",
-                    "desktopNotifications"
-                  )}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600 relative" />
-              </label>
-            </div>
-          </div>
+          <button
+            onClick={async()=>{
+              if (!newPassword || newPassword !== confirmPassword) { toast.error("Passwords do not match"); return; }
+              try { await updatePassword(getAuth().currentUser, newPassword); toast.success("Password updated"); setNewPassword(""); setConfirmPassword(""); } catch(e){ const msg = String(e?.message||""); toast.error(msg.includes('recent')? 'Please log in again and retry' : 'Failed to update password'); }
+            }}
+            className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg ${isDark?"bg-red-600 hover:bg-red-500":"bg-red-600 hover:bg-red-700"} text-white transition`}
+          >
+            <Save className="w-4 h-4"/> Update Password
+          </button>
         </div>
       </div>
     </div>
