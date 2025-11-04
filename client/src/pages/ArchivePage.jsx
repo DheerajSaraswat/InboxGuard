@@ -122,21 +122,12 @@ export default function ArchivePage() {
       <Sidebar isDark={isDark} />
       <div className="flex-1 flex flex-col min-h-0">
         <div
-          className={`border-b p-4 ${
+          className={`border-b p-4 pl-12 md:pl-4 ${
             isDark ? "bg-[#232326]" : "bg-white"
           } border-gray-200`}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 flex-1">
-              <button
-                onClick={() => navigate('/user/u0/dashboard')}
-                className={`p-2 rounded-full hover:${
-                  isDark ? "bg-[#232326]" : "bg-[#f3f4f6]"
-                } ${isDark ? "text-[#f3f4f6]" : "text-[#111]"}`}
-                title="Back to Inbox"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
               <div className="relative flex-1 max-w-md">
                 <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${isDark ? 'text-[#9aa0a6]' : 'text-[#bdbdbd]'}`} />
                 <input

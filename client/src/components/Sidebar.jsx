@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -16,8 +16,6 @@ import logo from "../assets/LightThemeLogo.png";
 import { Link } from "react-router-dom";
 import api from "../utils/api";
 
-
-
 export default function Sidebar({ isDark }) {
   const [open, setOpen] = useState(() => {
     try {
@@ -27,7 +25,7 @@ export default function Sidebar({ isDark }) {
       return false;
     }
   });
-  const draftCount = useSelector(state => state.draft.drafts.length);
+  const draftCount = useSelector((state) => state.draft.drafts.length);
   const navigate = useNavigate();
   const location = useLocation();
   const [usage, setUsage] = useState(null);
@@ -36,8 +34,11 @@ export default function Sidebar({ isDark }) {
 
   // Helper function to determine if a route is active
   const isActiveRoute = (path) => {
-    if (path === '/user/u0' || path === '/user/u0/dashboard') {
-      return location.pathname === '/user/u0' || location.pathname === '/user/u0/dashboard';
+    if (path === "/user/u0" || path === "/user/u0/dashboard") {
+      return (
+        location.pathname === "/user/u0" ||
+        location.pathname === "/user/u0/dashboard"
+      );
     }
     return location.pathname === path;
   };
@@ -62,23 +63,33 @@ export default function Sidebar({ isDark }) {
   useEffect(() => {
     let isMounted = true;
     let hasFetched = false;
-    
+
     const fetchCounts = async () => {
       if (!isMounted) return;
-      
+
       try {
         const [inboxRes, spamRes] = await Promise.all([
           api.get("/emails/emailList?mailbox=inbox"),
-          api.get("/emails/emailList?mailbox=spam").catch(() => ({ data: { emails: [] } }))
+          api
+            .get("/emails/emailList?mailbox=spam")
+            .catch(() => ({ data: { emails: [] } })),
         ]);
         if (!isMounted) return;
-        
+
         const inboxEmails = inboxRes.data?.emails || [];
-        const unread = inboxEmails.filter(email => !email.to?.[0]?.readAt).length;
+        const unread = inboxEmails.filter(
+          (email) => !email.to?.[0]?.readAt
+        ).length;
         setUnreadCount(unread);
-        
+
         const spamEmails = spamRes.data?.emails || [];
-        const spam = spamEmails.filter(e => e.securityAnalysis?.riskLevel && ['medium', 'high', 'critical'].includes(e.securityAnalysis.riskLevel)).length;
+        const spam = spamEmails.filter(
+          (e) =>
+            e.securityAnalysis?.riskLevel &&
+            ["medium", "high", "critical"].includes(
+              e.securityAnalysis.riskLevel
+            )
+        ).length;
         setSpamCount(spam);
       } catch (error) {
         if (isMounted) {
@@ -94,13 +105,13 @@ export default function Sidebar({ isDark }) {
         hasFetched = true;
       }
     }, 1000);
-    
+
     const interval = setInterval(() => {
       if (isMounted) {
         fetchCounts();
       }
     }, 45000); // Check every 45 seconds to avoid quota issues
-    
+
     return () => {
       isMounted = false;
       clearTimeout(timeout);
@@ -133,17 +144,17 @@ export default function Sidebar({ isDark }) {
       {/* Sidebar */}
       <div
         className={`
-          fixed md:static top-0 left-0 z-40
-          h-full w-64 min-h-screen
-          transition-transform duration-300
-          ${open ? "translate-x-0" : "-translate-x-full"}
-          md:translate-x-0
-          ${
-            isDark
-              ? "bg-gradient-to-b from-[#232326] via-[#18181b] to-[#111] shadow-2xl border-r border-[#23232b]/70 backdrop-blur-[2px]"
-              : "bg-gray-50 shadow-xl"
-          }
-        `}
+    fixed md:relative top-0 left-0 z-40
+    h-full w-64 min-h-screen flex-shrink-0
+    transition-transform duration-300
+    ${open ? "translate-x-0" : "-translate-x-full"}
+    md:translate-x-0
+    ${
+      isDark
+        ? "bg-gradient-to-b from-[#232326] via-[#18181b] to-[#111] shadow-2xl border-r border-[#23232b]/70 backdrop-blur-[2px]"
+        : "bg-gray-50 shadow-xl"
+    }
+  `}
         style={{ maxHeight: "100vh", overflowY: "auto" }}
       >
         <div className="p-4">
@@ -161,9 +172,9 @@ export default function Sidebar({ isDark }) {
           </Link>
           <nav className="flex flex-col gap-4 text-[1rem]">
             <button
-              onClick={() => navigate('/user/u0/dashboard')}
+              onClick={() => navigate("/user/u0/dashboard")}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isActiveRoute('/user/u0/dashboard')
+                isActiveRoute("/user/u0/dashboard")
                   ? isDark
                     ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
                     : "bg-gray-200 text-[#111] font-semibold"
@@ -176,9 +187,7 @@ export default function Sidebar({ isDark }) {
               {unreadCount > 0 && (
                 <span
                   className={`ml-auto ${
-                    isDark
-                      ? "bg-red-600 text-white"
-                      : "bg-red-500 text-white"
+                    isDark ? "bg-red-600 text-white" : "bg-red-500 text-white"
                   } text-xs px-2 py-1 rounded-full font-bold`}
                 >
                   {unreadCount}
@@ -186,9 +195,9 @@ export default function Sidebar({ isDark }) {
               )}
             </button>
             <button
-              onClick={() => navigate('/starred')}
+              onClick={() => navigate("/starred")}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isActiveRoute('/starred')
+                isActiveRoute("/starred")
                   ? isDark
                     ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
                     : "bg-gray-200 text-[#111] font-semibold"
@@ -200,9 +209,9 @@ export default function Sidebar({ isDark }) {
               <Star className="w-4 h-4" /> Starred
             </button>
             <button
-              onClick={() => navigate('/sent')}
+              onClick={() => navigate("/sent")}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isActiveRoute('/sent')
+                isActiveRoute("/sent")
                   ? isDark
                     ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
                     : "bg-gray-200 text-[#111] font-semibold"
@@ -214,9 +223,9 @@ export default function Sidebar({ isDark }) {
               <Send className="w-4 h-4" /> Sent
             </button>
             <button
-              onClick={() => navigate('/drafts')}
+              onClick={() => navigate("/drafts")}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isActiveRoute('/drafts')
+                isActiveRoute("/drafts")
                   ? isDark
                     ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
                     : "bg-gray-200 text-[#111] font-semibold"
@@ -227,19 +236,21 @@ export default function Sidebar({ isDark }) {
             >
               <FileText className="w-4 h-4" /> Drafts
               {draftCount > 0 && (
-                <span className={`ml-auto text-xs px-2 py-1 rounded-full font-bold ${
-                  isDark 
-                    ? "bg-blue-600 text-white" 
-                    : "bg-[#e5e7eb] text-[#111]"
-                }`}>
+                <span
+                  className={`ml-auto text-xs px-2 py-1 rounded-full font-bold ${
+                    isDark
+                      ? "bg-blue-600 text-white"
+                      : "bg-[#e5e7eb] text-[#111]"
+                  }`}
+                >
                   {draftCount}
                 </span>
               )}
             </button>
             <button
-              onClick={() => navigate('/archive')}
+              onClick={() => navigate("/archive")}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isActiveRoute('/archive')
+                isActiveRoute("/archive")
                   ? isDark
                     ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
                     : "bg-gray-200 text-[#111] font-semibold"
@@ -251,9 +262,9 @@ export default function Sidebar({ isDark }) {
               <Archive className="w-4 h-4" /> Archive
             </button>
             <button
-              onClick={() => navigate('/user/u0/spam')}
+              onClick={() => navigate("/user/u0/spam")}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isActiveRoute('/user/u0/spam') || isActiveRoute('/spam')
+                isActiveRoute("/user/u0/spam") || isActiveRoute("/spam")
                   ? isDark
                     ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
                     : "bg-gray-200 text-[#111] font-semibold"
@@ -266,9 +277,7 @@ export default function Sidebar({ isDark }) {
               {spamCount > 0 && (
                 <span
                   className={`ml-auto ${
-                    isDark
-                      ? "bg-red-600 text-white"
-                      : "bg-red-500 text-white"
+                    isDark ? "bg-red-600 text-white" : "bg-red-500 text-white"
                   } text-xs px-2 py-1 rounded-full font-bold`}
                 >
                   {spamCount}
@@ -276,9 +285,9 @@ export default function Sidebar({ isDark }) {
               )}
             </button>
             <button
-              onClick={() => navigate('/trash')}
+              onClick={() => navigate("/trash")}
               className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg ${
-                isActiveRoute('/trash')
+                isActiveRoute("/trash")
                   ? isDark
                     ? "bg-[#232326] text-[#f3f4f6] font-bold shadow-inner border-l-4 border-[#E50914]"
                     : "bg-gray-200 text-[#111] font-semibold"
@@ -299,18 +308,19 @@ export default function Sidebar({ isDark }) {
                 ? "hover:bg-[#232326]/80 text-[#f3f4f6]"
                 : "hover:bg-[#f3f4f6] text-[#111]"
             } font-normal transition`}
-            onClick={() => navigate('/user/u0/settings')}
+            onClick={() => navigate("/user/u0/settings")}
           >
             <Settings className="w-4 h-4" /> Settings
           </button>
           {usage && (
             <div className="px-3 py-2 text-xs text-gray-500">
-              Storage: {Math.round((usage.used/usage.limit)*100)}% ({Math.round(usage.used/1024/1024)} MB / {Math.round(usage.limit/1024/1024)} MB)
+              Storage: {Math.round((usage.used / usage.limit) * 100)}% (
+              {Math.round(usage.used / 1024 / 1024)} MB /{" "}
+              {Math.round(usage.limit / 1024 / 1024)} MB)
             </div>
           )}
         </div>
         {/* Sidebar separation */}
-       
       </div>
       {/* Overlay for mobile */}
       {open && (
