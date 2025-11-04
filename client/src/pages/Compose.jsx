@@ -287,54 +287,61 @@ const EmailEditor = ({ isDark }) => {
 
     try {
       // Call ML model to detect phishing
-      const response = await axios.post("http://127.0.0.1:8000/classify", {
+      const mlApiUrl = import.meta.env.VITE_ML_API_URL || "https://inboxguard-production.up.railway.app";
+      // Ensure URL doesn't have trailing slash
+      const baseUrl = mlApiUrl.replace(/\/$/, "");
+      const response = await axios.post(`${baseUrl}/classify`, {
         email_text: text,
       });
       console.log("ML Model Response:", response.data);
       setIsScanning(false);
 
-      if (response.data.classification === "phishing") {
+      // Check if phishing detected (using classification or is_phishing)
+      const isPhishing = response.data.classification === "phishing" || response.data.is_phishing === true;
+      
+      if (isPhishing) {
         // Phishing detected - create phishing report
+        const confidence = response.data.confidence || 0.85;
+        const confidencePercent = Math.round(confidence * 100);
+        
+        // Determine risk level based on confidence
+        let riskLevel = "low";
+        if (confidence >= 0.8) {
+          riskLevel = "high";
+        } else if (confidence >= 0.6) {
+          riskLevel = "medium";
+        }
+        
         const phishingReport = {
           reportedBy: "system",
           reportedAt: new Date().toISOString(),
           reportType: "auto-scan",
-          confidence: response.data.confidence || 85,
+          confidence: confidencePercent,
           emailData: {
             subject,
             text: text.substring(0, 500), // Store first 500 chars
           },
           analysis: {
-            riskScore: response.data.score || 75,
-            detectedPatterns: response.data.reasons || [
-              "Phishing content detected",
+            riskScore: confidencePercent,
+            detectedPatterns: [
+              `ML model detected phishing with ${confidencePercent}% confidence`,
+              `Classification: ${response.data.classification || "phishing"}`,
             ],
             verificationStatus: "pending",
           },
-          riskLevel:
-            response.data.score > 75
-              ? "high"
-              : response.data.score > 50
-              ? "medium"
-              : "low",
+          riskLevel: riskLevel,
         };
 
-        const derivedLevel = phishingReport.riskLevel;
-        if (
-          derivedLevel === "high" ||
-          derivedLevel === "medium" ||
-          derivedLevel === "critical"
-        ) {
-          setScanResult({
-            riskLevel: derivedLevel,
-            indicators: response.data.reasons?.map((reason) => ({
-              description: reason,
-            })) || [{ description: "Phishing content detected by ML model" }],
-            phishingReport,
-          });
-          setShowAlert(true);
-          return;
-        }
+        // Show warning alert for all phishing detections (low, medium, high)
+        setScanResult({
+          riskLevel: phishingReport.riskLevel,
+          indicators: phishingReport.analysis.detectedPatterns.map((pattern) => ({
+            description: pattern,
+          })),
+          phishingReport,
+        });
+        setShowAlert(true);
+        return; // Stop email sending - user must review or send anyway
       }
 
       // No phishing detected - send email normally
