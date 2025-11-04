@@ -29,7 +29,7 @@ Setup
    - npm install in client/ and server/
 2) Environment
    - Create client/.env with:
-     - VITE_API_BASE_URL=https://your-api.example.com
+     - VITE_API_BASE_URL=https://inboxguard-1mqh.onrender.com/api (backend API URL)
      - VITE_ML_API_URL=https://inboxguard-production.up.railway.app (ML model URL for phishing detection)
      - VITE_FIREBASE_API_KEY=...
      - VITE_FIREBASE_AUTH_DOMAIN=...
