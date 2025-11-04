@@ -16,6 +16,9 @@ import StarredPage from "./pages/StarredPage.jsx";
 import ArchivePage from "./pages/ArchivePage.jsx";
 import SentPage from "./pages/SentPage.jsx";
 import SpamPage from "./pages/SpamPage.jsx";
+import RouteTransition from "./components/RouteTransition.jsx";
+import NotFound from "./components/NotFound.jsx";
+import AppLayout from "./components/AppLayout.jsx";
 import { useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 import { onMessageListener, requestForToken } from "./common/firebase.jsx";
@@ -96,19 +99,22 @@ function App() {
           path="/reset-password"
           element={<ForgotPasswordPage isDark={isDark} />}
         />
-        <Route path="/user/u0" element={<Dashboard isDark={isDark} />}/>
-        <Route path="/user/u0/dashboard" element={<Dashboard isDark={isDark} />}/>
-        <Route path="/user/u0/compose" element={<Compose isDark={isDark}/>} />
-        <Route path="/user/u0/email/:id" element={<EmailViewer isDark={isDark} />} />
-        <Route path="/user/u0/profile" element={<ProfilePage isDark={isDark} />} />
-        <Route path="/user/u0/settings" element={<SettingsPage isDark={isDark} />} />
-        <Route path="/drafts" element={<DraftsPage />} />
-        <Route path="/sent" element={<SentPage isDark={isDark} />} />
-        <Route path="/starred" element={<StarredPage isDark={isDark} />} />
-        <Route path="/archive" element={<ArchivePage isDark={isDark} />} />
-        <Route path="/user/u0/spam" element={<SpamPage isDark={isDark} />} />
-        <Route path="/spam" element={<SpamPage isDark={isDark} />} />
-        <Route path="/trash" element={<TrashPage isDark={isDark} />} />
+        <Route element={<AppLayout isDark={isDark} />}>
+          <Route path="/user/u0" element={<Dashboard isDark={isDark} />}/>
+          <Route path="/user/u0/dashboard" element={<Dashboard isDark={isDark} />}/>
+          <Route path="/user/u0/compose" element={<Compose isDark={isDark}/>} />
+          <Route path="/user/u0/email/:id" element={<EmailViewer isDark={isDark} />} />
+          <Route path="/user/u0/profile" element={<ProfilePage isDark={isDark} />} />
+          <Route path="/user/u0/settings" element={<SettingsPage isDark={isDark} />} />
+          <Route path="/drafts" element={<DraftsPage />} />
+          <Route path="/sent" element={<SentPage isDark={isDark} />} />
+          <Route path="/starred" element={<StarredPage isDark={isDark} />} />
+          <Route path="/archive" element={<ArchivePage isDark={isDark} />} />
+          <Route path="/user/u0/spam" element={<SpamPage isDark={isDark} />} />
+          <Route path="/spam" element={<SpamPage isDark={isDark} />} />
+          <Route path="/trash" element={<TrashPage isDark={isDark} />} />
+        </Route>
+        <Route path="*" element={<NotFound isDark={isDark} />} />
       </Routes>
     </div>
   );

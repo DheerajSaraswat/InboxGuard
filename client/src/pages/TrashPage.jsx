@@ -14,7 +14,7 @@ import {
   ArrowLeft,
   Delete,
 } from "lucide-react";
-import Sidebar from "../components/Sidebar";
+// Sidebar is provided by AppLayout
 import MailCards from "../components/MailCards";
 import { useState as useStateReact } from "react";
 import toast from "react-hot-toast";
@@ -25,6 +25,7 @@ import { showEmailLists } from "../apiRequests/showEmailLists";
 import { getAuth } from "firebase/auth";
 import api from "../utils/api";
 import { useEmailFetch } from "../hooks/useEmailFetch";
+import Loader from "../common/Loader";
 
 export default function TrashPage() {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -39,6 +40,8 @@ export default function TrashPage() {
   // Use the custom hook for email fetching
   const { emails, isLoadingEmails, removeEmail } = useEmailFetch('trash');
   const [searchQuery, setSearchQuery] = useState("");
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+  const [isRestoringBulk, setIsRestoringBulk] = useState(false);
 
   const normalize = (s = "") => String(s || "").toLowerCase();
   const matchesQuery = (email) => {
@@ -114,6 +117,8 @@ export default function TrashPage() {
     }
 
     try {
+      if (isDeletingBulk) return;
+      setIsDeletingBulk(true);
       // Optimistically remove emails from UI
       selectedEmails.forEach(emailId => removeEmail(emailId));
       setSelectedEmails([]);
@@ -137,23 +142,49 @@ export default function TrashPage() {
     } catch (error) {
       console.error("Error deleting emails:", error);
       toast.error("Failed to delete emails");
+    } finally {
+      setIsDeletingBulk(false);
     }
   };
 
+  const handleRestore = async () => {
+    if (selectedEmails.length === 0) {
+      toast.error("Please select emails to restore");
+      return;
+    }
+
+    try {
+      if (isRestoringBulk) return;
+      setIsRestoringBulk(true);
+      // Optimistically remove from trash UI
+      selectedEmails.forEach((emailId) => removeEmail(emailId));
+      const ids = [...selectedEmails];
+      setSelectedEmails([]);
+
+      // Bulk restore on server
+      await api.patch(`/emails/trash/restore/bulk`, { ids });
+      toast.success(`${ids.length} email(s) restored`);
+    } catch (error) {
+      console.error("Error restoring emails:", error);
+      toast.error("Failed to restore emails");
+    } finally {
+      setIsRestoringBulk(false);
+    }
+  };
+
+  // Per-item restore removed; use bulk actions above
+
   if (!user) return null;
 
-  // Avoid full-screen loader; show inline skeletons instead
+  if (isLoadingEmails) {
+    return (
+      <div className={isDark ? "dark" : ""}>
+        <Loader text="Loading trash…" />
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={`flex min-h-screen h-screen transition-colors duration-300 ${
-        isDark ? "bg-[#18181b] text-[#f3f4f6]" : "bg-[#fafbfc] text-[#111]"
-      }`}
-      style={{
-        fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
-      }}
-    >
-      <Sidebar isDark={isDark} />
       <div className="flex-1 flex flex-col min-h-0">
         <div
           className={`border-b p-4 ${
@@ -311,13 +342,23 @@ export default function TrashPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {selectedEmails.length > 0 && (
+                    <>
+                      <button
+                        onClick={handleRestore}
+                        disabled={isRestoringBulk}
+                        className={`bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition ${isRestoringBulk ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      >
+                        {isRestoringBulk ? 'Restoring…' : 'Restore'}
+                      </button>
                     <button
                       onClick={handlePermanentDelete}
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+                      disabled={isDeletingBulk}
+                      className={`bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition ${isDeletingBulk ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                       <Delete className="w-4 h-4" />
-                      Delete Permanently
+                      {isDeletingBulk ? 'Deleting…' : 'Delete Permanently'}
                     </button>
+                    </>
                   )}
                   <button className="bg-transparent p-2 rounded-full hover:bg-[#f3f4f6]">
                     <MoreHorizontal className="w-4 h-4 text-[#111]" />
@@ -365,6 +406,5 @@ export default function TrashPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

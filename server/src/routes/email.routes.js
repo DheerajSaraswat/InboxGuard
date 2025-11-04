@@ -1,6 +1,6 @@
 import express from "express";
 import { verifyAuth } from "../middlewares/verifyAuth.js";
-import { sendEmail, showEmailList, getEmailById, markEmailRead, moveToTrash, bulkMoveToTrash, deletePermanently, toggleStarred, toggleArchive, saveDraft, downloadAttachment } from "../controllers/email.controller.js";
+import { sendEmail, showEmailList, getEmailById, markEmailRead, moveToTrash, bulkMoveToTrash, restoreFromTrash, bulkRestoreFromTrash, deletePermanently, toggleStarred, toggleArchive, saveDraft, downloadAttachment } from "../controllers/email.controller.js";
 
 const router = express.Router();
 
@@ -13,6 +13,8 @@ router.route("/:id/trash").patch(verifyAuth, moveToTrash);
 router.route("/:id/star").patch(verifyAuth, toggleStarred);
 router.route("/:id/archive").patch(verifyAuth, toggleArchive);
 router.route("/trash/bulk").patch(verifyAuth, bulkMoveToTrash);
+router.route("/:id/restore").patch(verifyAuth, restoreFromTrash);
+router.route("/trash/restore/bulk").patch(verifyAuth, bulkRestoreFromTrash);
 router.route("/:id/delete").delete(verifyAuth, deletePermanently);
 
 // Proxy download for attachments

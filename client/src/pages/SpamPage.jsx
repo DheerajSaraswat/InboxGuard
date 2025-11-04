@@ -14,7 +14,7 @@ import {
   Trash2,
   Shield,
 } from "lucide-react";
-import Sidebar from "../components/Sidebar";
+// Sidebar is provided by AppLayout
 import toast from "react-hot-toast";
 import { logout } from "../common/firebase";
 import { sliceLogout } from "../redux/slices/authSlice";
@@ -23,6 +23,7 @@ import { getAuth } from "firebase/auth";
 import { useEmailFetch } from "../hooks/useEmailFetch";
 import { getEmailById } from "../apiRequests/getEmailById";
 import MailDetail from "../components/MailDetail";
+import Loader from "../common/Loader";
 import api from "../utils/api";
 
 export default function SpamPage({ isDark: isDarkProp }) {
@@ -48,6 +49,8 @@ export default function SpamPage({ isDark: isDarkProp }) {
   } = useEmailFetch("spam", 30000, 1, 20);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEmail, setSelectedEmail] = useState(null);
+  const [isEmptying, setIsEmptying] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const normalize = (s = "") => String(s || "").toLowerCase();
   const matchesQuery = (email) => {
@@ -102,15 +105,18 @@ export default function SpamPage({ isDark: isDarkProp }) {
 
   const handleEmptySpam = async () => {
     try {
-      // Move all spam emails to trash
-      for (const email of emails) {
-        await api.put(`/emails/${email._id}/move-to-trash`);
-      }
+      if (isEmptying) return;
+      setIsEmptying(true);
+      const ids = emails.map(e => e._id);
+      if (ids.length === 0) return;
+      await api.patch(`/emails/trash/bulk`, { ids });
+      ids.forEach(id => removeEmail(id));
+      setSelectedEmail(null);
       toast.success("Spam folder emptied");
-      // Refresh emails list
-      window.location.reload();
     } catch (error) {
       toast.error("Failed to empty spam");
+    } finally {
+      setIsEmptying(false);
     }
   };
 
@@ -159,33 +165,10 @@ export default function SpamPage({ isDark: isDarkProp }) {
   if (!user) return null;
 
   if (isLoadingEmails) {
-    return (
-      <div
-        className={`flex min-h-screen h-screen items-center justify-center transition-colors duration-300 ${
-          isDark ? "bg-[#18181b] text-[#f3f4f6]" : "bg-[#fafbfc] text-[#111]"
-        }`}
-        style={{
-          fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="animate-spin h-6 w-6 rounded-full border-2 border-current border-t-transparent" />
-          <span className="text-lg font-medium">Loading spam folder…</span>
-        </div>
-      </div>
-    );
+    return <Loader text="Loading spam folder…" />;
   }
 
   return (
-    <div
-      className={`flex min-h-screen h-screen transition-colors duration-300 ${
-        isDark ? "bg-[#18181b] text-[#f3f4f6]" : "bg-[#fafbfc] text-[#111]"
-      }`}
-      style={{
-        fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
-      }}
-    >
-      <Sidebar isDark={isDark} />
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
         <div
           className={`border-b p-4 flex-shrink-0 ${
@@ -341,14 +324,15 @@ export default function SpamPage({ isDark: isDarkProp }) {
                   {filteredEmails.length > 0 && (
                     <button
                       onClick={handleEmptySpam}
+                      disabled={isEmptying}
                       className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
                         isDark
                           ? "bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-600"
                           : "bg-red-50 hover:bg-red-100 text-red-600 border border-red-300"
-                      }`}
+                      } ${isEmptying ? "opacity-60 cursor-not-allowed" : ""}`}
                     >
                       <Trash2 className="w-4 h-4" />
-                      <span className="hidden sm:inline">Empty Spam</span>
+                      <span className="hidden sm:inline">{isEmptying ? "Emptying…" : "Empty Spam"}</span>
                     </button>
                   )}
                   <button
@@ -534,23 +518,25 @@ export default function SpamPage({ isDark: isDarkProp }) {
               <MailDetail
                 email={selectedEmail}
                 isDark={isDark}
+                isBusy={isDeleting}
                 onBack={() => setSelectedEmail(null)}
                 onDelete={() => {
-                  // Move to trash
+                  if (isDeleting) return;
+                  setIsDeleting(true);
                   api
-                    .put(`/emails/${selectedEmail._id}/move-to-trash`)
+                    .patch(`/emails/${selectedEmail._id}/trash`)
                     .then(() => {
                       toast.success("Moved to trash");
                       setSelectedEmail(null);
                       removeEmail(selectedEmail._id);
                     })
-                    .catch(() => toast.error("Failed to move to trash"));
+                    .catch(() => toast.error("Failed to move to trash"))
+                    .finally(() => setIsDeleting(false));
                 }}
               />
             </div>
           )}
         </div>
       </div>
-    </div>
   );
 }

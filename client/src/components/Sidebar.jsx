@@ -29,8 +29,22 @@ export default function Sidebar({ isDark }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [usage, setUsage] = useState(null);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [spamCount, setSpamCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("sidebar_unread");
+      return saved ? Number(saved) : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const [spamCount, setSpamCount] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("sidebar_spam");
+      return saved ? Number(saved) : 0;
+    } catch {
+      return 0;
+    }
+  });
 
   // Helper function to determine if a route is active
   const isActiveRoute = (path) => {
@@ -81,6 +95,7 @@ export default function Sidebar({ isDark }) {
           (email) => !email.to?.[0]?.readAt
         ).length;
         setUnreadCount(unread);
+        try { sessionStorage.setItem("sidebar_unread", String(unread)); } catch {}
 
         const spamEmails = spamRes.data?.emails || [];
         const spam = spamEmails.filter(
@@ -91,6 +106,7 @@ export default function Sidebar({ isDark }) {
             )
         ).length;
         setSpamCount(spam);
+        try { sessionStorage.setItem("sidebar_spam", String(spam)); } catch {}
       } catch (error) {
         if (isMounted) {
           console.error("Failed to fetch counts:", error);

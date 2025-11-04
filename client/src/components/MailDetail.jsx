@@ -8,7 +8,7 @@ import {
   Star,
 } from "lucide-react";
 
-export default function MailDetail({ email, onBack, onDelete, isDark }) {
+export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = false }) {
   const [previewAttachment, setPreviewAttachment] = useState(null);
   const navigate = useNavigate();
   console.log(email);
@@ -113,12 +113,13 @@ export default function MailDetail({ email, onBack, onDelete, isDark }) {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={onDelete}
+                onClick={isBusy ? undefined : onDelete}
+                disabled={isBusy}
                 className={`p-2 rounded-md transition ${
                   isDark
                     ? "hover:bg-red-900/20 text-red-400"
                     : "hover:bg-red-50 text-red-600"
-                }`}
+                } ${isBusy ? "opacity-60 cursor-not-allowed" : ""}`}
               >
                 <Trash2 className="w-4 h-4" />
               </button>

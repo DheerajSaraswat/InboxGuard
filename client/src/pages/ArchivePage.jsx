@@ -13,7 +13,7 @@ import {
   ArrowLeft,
   Archive,
 } from "lucide-react";
-import Sidebar from "../components/Sidebar";
+// Sidebar is provided by AppLayout
 import MailCards from "../components/MailCards";
 import toast from "react-hot-toast";
 import { logout } from "../common/firebase";
@@ -24,6 +24,7 @@ import { getAuth } from "firebase/auth";
 import { useEmailFetch } from "../hooks/useEmailFetch";
 import { getEmailById } from "../apiRequests/getEmailById";
 import MailDetail from "../components/MailDetail";
+import Loader from "../common/Loader";
 
 export default function ArchivePage() {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -93,33 +94,10 @@ export default function ArchivePage() {
   if (!user) return null;
 
   if (isLoadingEmails) {
-    return (
-      <div
-        className={`flex min-h-screen h-screen items-center justify-center transition-colors duration-300 ${
-          isDark ? "bg-[#18181b] text-[#f3f4f6]" : "bg-[#fafbfc] text-[#111]"
-        }`}
-        style={{
-          fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="animate-spin h-6 w-6 rounded-full border-2 border-current border-t-transparent" />
-          <span className="text-lg font-medium">Loading archived emails…</span>
-        </div>
-      </div>
-    );
+    return <Loader text="Loading archived emails…" />;
   }
 
   return (
-    <div
-      className={`flex min-h-screen h-screen transition-colors duration-300 ${
-        isDark ? "bg-[#18181b] text-[#f3f4f6]" : "bg-[#fafbfc] text-[#111]"
-      }`}
-      style={{
-        fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
-      }}
-    >
-      <Sidebar isDark={isDark} />
       <div className="flex-1 flex flex-col min-h-0">
         <div
           className={`border-b p-4 pl-12 md:pl-4 ${
@@ -313,6 +291,5 @@ export default function ArchivePage() {
           )}
         </div>
       </div>
-    </div>
   );
 }

@@ -13,7 +13,7 @@ import {
   ArrowLeft,
   Star,
 } from "lucide-react";
-import Sidebar from "../components/Sidebar";
+// Sidebar is provided by AppLayout
 import MailCards from "../components/MailCards";
 import toast from "react-hot-toast";
 import { logout } from "../common/firebase";
@@ -24,6 +24,7 @@ import { getAuth } from "firebase/auth";
 import { useEmailFetch } from "../hooks/useEmailFetch";
 import { getEmailById } from "../apiRequests/getEmailById";
 import MailDetail from "../components/MailDetail";
+import Loader from "../common/Loader";
 
 export default function StarredPage() {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -92,18 +93,11 @@ export default function StarredPage() {
 
   if (!user) return null;
 
-  // Avoid full-screen loader; show inline skeletons instead
+  if (isLoadingEmails) {
+    return <Loader text="Loading starred emails…" />;
+  }
 
   return (
-    <div
-      className={`flex min-h-screen h-screen transition-colors duration-300 ${
-        isDark ? "bg-[#18181b] text-[#f3f4f6]" : "bg-[#fafbfc] text-[#111]"
-      }`}
-      style={{
-        fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
-      }}
-    >
-      <Sidebar isDark={isDark} />
       <div className="flex-1 flex flex-col min-h-0">
         <div
           className={`border-b p-4 ${
@@ -297,6 +291,5 @@ export default function StarredPage() {
           )}
         </div>
       </div>
-    </div>
   );
 }

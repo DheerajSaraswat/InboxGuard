@@ -537,6 +537,56 @@ const bulkMoveToTrash = asyncHandler(async (req, res) => {
   return res.json({ success: true });
 });
 
+const restoreFromTrash = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+  const { id } = req.params;
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) return res.status(404).json({ message: "User not found" });
+  const email = await Email.findOne({ _id: id, $or: [{ "to.user": user._id }, { from: user._id }] });
+  if (!email) return res.status(404).json({ message: "Email not found" });
+  // Restore destination:
+  // - If user is sender -> sent
+  // - If user is recipient -> spam if risk medium/high/critical else inbox
+  if (email.from.toString() === user._id.toString()) {
+    email.mailbox = "sent";
+  } else {
+    const level = String(email.securityAnalysis?.riskLevel || "").toLowerCase();
+    const isSpam = ["medium", "high", "critical"].includes(level);
+    email.mailbox = isSpam ? "spam" : "inbox";
+  }
+  await email.save();
+  return res.json({ success: true });
+});
+
+const bulkRestoreFromTrash = asyncHandler(async (req, res) => {
+  const { user_id } = req.user;
+  const { ids = [] } = req.body || {};
+  const user = await User.findOne({ firebaseUid: user_id });
+  if (!user) return res.status(404).json({ message: "User not found" });
+  if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: "ids[] required" });
+  // For each id, decide mailbox based on ownership (sent vs inbox)
+  const emails = await Email.find({ _id: { $in: ids }, $or: [{ "to.user": user._id }, { from: user._id }] });
+  const sentIds = [];
+  const spamIds = [];
+  const inboxIds = [];
+  for (const e of emails) {
+    if (e.from.toString() === user._id.toString()) {
+      sentIds.push(e._id);
+    } else {
+      const level = String(e.securityAnalysis?.riskLevel || "").toLowerCase();
+      if (["medium", "high", "critical"].includes(level)) {
+        spamIds.push(e._id);
+      } else {
+        inboxIds.push(e._id);
+      }
+    }
+  }
+  if (sentIds.length) await Email.updateMany({ _id: { $in: sentIds } }, { $set: { mailbox: "sent" } });
+  if (spamIds.length) await Email.updateMany({ _id: { $in: spamIds } }, { $set: { mailbox: "spam" } });
+  if (inboxIds.length) await Email.updateMany({ _id: { $in: inboxIds } }, { $set: { mailbox: "inbox" } });
+  return res.json({ success: true });
+});
+
 const deletePermanently = asyncHandler(async (req, res) => {
   const { user_id } = req.user;
   const { id } = req.params;
@@ -671,4 +721,4 @@ const downloadAttachment = asyncHandler(async (req, res) => {
   }
 });
 
-export { sendEmail, showEmailList, getEmailById, markEmailRead, moveToTrash, bulkMoveToTrash, deletePermanently, toggleStarred, toggleArchive, saveDraft, downloadAttachment };
+export { sendEmail, showEmailList, getEmailById, markEmailRead, moveToTrash, bulkMoveToTrash, restoreFromTrash, bulkRestoreFromTrash, deletePermanently, toggleStarred, toggleArchive, saveDraft, downloadAttachment };
