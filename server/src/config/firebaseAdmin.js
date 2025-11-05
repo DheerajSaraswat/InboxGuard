@@ -1,13 +1,11 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import admin from "firebase-admin";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+  console.error("Missing FIREBASE_SERVICE_ACCOUNT in environment variables");
+  process.exit(1);
+}
 const serviceAccount = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "serviceAccountKey.json"), "utf-8")
+  process.env.FIREBASE_SERVICE_ACCOUNT
 );
 
 // Prevent multiple initialization
