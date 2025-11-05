@@ -1,10 +1,17 @@
 import { app } from "./app.js";
 import connect from "./db/index.js"
 import dotenv from "dotenv";
+import fs from "fs";
 
 dotenv.config({
     path: "./.env"
 })
+
+const tempDir = "public/temp";
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+  console.log(`Created missing directory: ${tempDir}`);
+}
 
 connect()
   .then(() => {

@@ -80,7 +80,4 @@ const UserSchema = new Schema({
   },
 });
 
-UserSchema.index({ email: 1 }, { unique: true });
-UserSchema.index({ firebaseUid: 1 }, { unique: true });
-
 export const User = mongoose.model("User", UserSchema);
