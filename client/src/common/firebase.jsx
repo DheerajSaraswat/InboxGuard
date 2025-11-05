@@ -19,12 +19,12 @@ import api from "../utils/api";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_APIKEY,
-  authDomain: "inboxguard-2b71a.firebaseapp.com",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTHDOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECTID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGINGID,
   appId: import.meta.env.VITE_FIREBASE_APPID,
-  measurementId: "G-QZJ1NBGDYB",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENTID,
 };
 
 const app = initializeApp(firebaseConfig);
