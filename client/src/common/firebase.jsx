@@ -58,7 +58,25 @@ export const googleAuth = async (rememberMe) => {
       username:user.username
     };
   } catch (error) {
-    // console.error("Google Auth error:", error);
+    console.error("Google Auth error:", error);
+    
+    // Provide user-friendly error messages
+    let errorMessage = "Google sign-in failed. Please try again.";
+    
+    if (error.code === "auth/popup-closed-by-user") {
+      errorMessage = "Sign-in popup was closed. Please try again.";
+    } else if (error.code === "auth/unauthorized-domain") {
+      errorMessage = "This domain is not authorized. Please contact support.";
+      console.error("Unauthorized domain. Make sure inboxguard.live is added to Firebase Console authorized domains.");
+    } else if (error.code === "auth/network-request-failed") {
+      errorMessage = "Network error. Please check your connection and try again.";
+    } else if (error.code === "auth/popup-blocked") {
+      errorMessage = "Popup was blocked. Please allow popups for this site and try again.";
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    toast.error(errorMessage);
     throw error;
   }
 };

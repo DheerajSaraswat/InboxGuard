@@ -81,8 +81,21 @@ const SigninPage = ({ isDark }) => {
     e.preventDefault();
     const nextErrors = { email: "", password: "" };
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) nextErrors.email = "Enter a valid email address.";
-    if (!password || password.length < 8) nextErrors.password = "Password must be at least 8 characters.";
+    
+    // Email validation
+    if (!email || !emailRegex.test(email)) {
+      nextErrors.email = "Enter a valid email address.";
+    }
+    
+    // Password validation
+    if (!password) {
+      nextErrors.password = "Password is required.";
+    } else if (password.length < 8) {
+      nextErrors.password = "Password must be at least 8 characters.";
+    } else if (password.length > 128) {
+      nextErrors.password = "Invalid password format.";
+    }
+    
     setErrors(nextErrors);
     if (nextErrors.email || nextErrors.password) return;
 
@@ -113,9 +126,10 @@ const SigninPage = ({ isDark }) => {
       await initializeUserKeys(res.data.data.firebaseUid);
       dispatch(sliceLogin({user:res.data.data, token:user.accessToken}))
       toast.success("Signed in with Google successfully!");
-      navigate("/user/u0"); // Example navigation after Google login
+      navigate("/user/u0");
     } catch (error) {
-      toast.error("Google sign-in failed.");
+      // Error message is already handled in googleAuth function
+      console.error("Google sign-in error:", error);
     } finally {
       setLoading(false);
     }
@@ -167,29 +181,40 @@ const SigninPage = ({ isDark }) => {
               />
               {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
             </div>
-            <div className="relative ">
+            <div className="relative">
               <label className={`block mb-2 ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`} htmlFor="password">
                 Password
               </label>
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                className={`w-full px-4 py-3 rounded-lg border pr-12 focus:outline-none focus:border-[#E50914] ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-[#b2b0b0ff]' : 'bg-white border-[#bbb] text-[#111]'}`}
-                value={password}
-                placeholder="Enter your password"
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
-              <button
-                type="button"
-                className="absolute top-10 right-5 p-1 focus:outline-none"
-                tabIndex={-1}
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                <EyeIcon visible={showPassword} />
-              </button>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  className={`w-full px-4 py-3 rounded-lg border pr-12 focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:border-[#E50914] transition-all ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-[#b2b0b0ff]' : 'bg-white border-[#bbb] text-[#111]'}`}
+                  value={password}
+                  placeholder="Enter your password"
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  aria-describedby={errors.password ? "password-error" : undefined}
+                  aria-invalid={errors.password ? "true" : "false"}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute top-1/2 right-3 transform -translate-y-1/2 p-1 focus:outline-none focus:ring-2 focus:ring-[#E50914] rounded"
+                  tabIndex={0}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  <EyeIcon visible={showPassword} />
+                </button>
+              </div>
+              {errors.password && (
+                <p id="password-error" className="text-red-500 text-sm mt-1" role="alert">
+                  {errors.password}
+                </p>
+              )}
             </div>
             <div className="flex items-center justify-between">
               <label className={`flex items-center ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`}>

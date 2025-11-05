@@ -9,6 +9,16 @@ export default function AppLayout({ isDark }) {
 
   useEffect(() => {
     const handler = (e) => {
+      // Don't trigger shortcuts when user is typing in input fields
+      const activeElement = document.activeElement;
+      const isInputField = 
+        activeElement?.tagName === "INPUT" ||
+        activeElement?.tagName === "TEXTAREA" ||
+        activeElement?.isContentEditable ||
+        activeElement?.getAttribute("contenteditable") === "true";
+      
+      if (isInputField) return;
+      
       // Basic keyboard shortcuts with Shift for navigation
       if (!e.shiftKey) return;
       const key = e.key?.toLowerCase();

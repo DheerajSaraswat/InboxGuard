@@ -52,9 +52,26 @@ const SignupPage = ({ isDark }) => {
     e.preventDefault();
     const nextErrors = { email: "", password: "", confirm: "" };
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) nextErrors.email = "Enter a valid email address.";
-    if (!password || password.length < 8) nextErrors.password = "Password must be at least 8 characters.";
-    if (password !== confirmPassword) nextErrors.confirm = "Passwords do not match.";
+    
+    // Email validation
+    if (!emailRegex.test(email)) {
+      nextErrors.email = "Enter a valid email address.";
+    }
+    
+    // Password validation - industry standards
+    if (!password || password.length < 8) {
+      nextErrors.password = "Password must be at least 8 characters long.";
+    } else if (password.length > 128) {
+      nextErrors.password = "Password must be less than 128 characters.";
+    }
+    
+    // Confirm password validation
+    if (!confirmPassword) {
+      nextErrors.confirm = "Please confirm your password.";
+    } else if (password !== confirmPassword) {
+      nextErrors.confirm = "Passwords do not match.";
+    }
+    
     setErrors(nextErrors);
     if (nextErrors.email || nextErrors.password || nextErrors.confirm) return;
 
@@ -145,25 +162,44 @@ const SignupPage = ({ isDark }) => {
               <label className={`block mb-2 ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`} htmlFor="password">
                 Password
               </label>
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                className={`w-full px-4 py-3 rounded-lg border pr-12 focus:outline-none focus:border-[#E50914] ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-white' : 'bg-white border-[#bbb] text-[#111]'}`}
-                value={password}
-                placeholder="Password"
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
-              <button
-                type="button"
-                className="absolute top-10 right-4 p-1 focus:outline-none"
-                tabIndex={-1}
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                <EyeIcon visible={showPassword} />
-              </button>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  className={`w-full px-4 py-3 rounded-lg border pr-12 focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:border-[#E50914] transition-all ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-white' : 'bg-white border-[#bbb] text-[#111]'}`}
+                  value={password}
+                  placeholder="Create a strong password"
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  aria-describedby={errors.password ? "password-error" : "password-requirements"}
+                  aria-invalid={errors.password ? "true" : "false"}
+                  required
+                  minLength={8}
+                />
+                <button
+                  type="button"
+                  className="absolute top-1/2 right-3 transform -translate-y-1/2 p-1 focus:outline-none focus:ring-2 focus:ring-[#E50914] rounded"
+                  tabIndex={0}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  <EyeIcon visible={showPassword} />
+                </button>
+              </div>
+              {errors.password && (
+                <p id="password-error" className="text-red-500 text-sm mt-1" role="alert">
+                  {errors.password}
+                </p>
+              )}
+              {!errors.password && password && (
+                <div id="password-requirements" className="text-xs mt-1 space-y-1">
+                  <p className={`${isDark ? 'text-[#888]' : 'text-gray-600'}`}>
+                    Password must be at least 8 characters long
+                  </p>
+                </div>
+              )}
             </div>
             <div className="relative">
               <label
@@ -172,27 +208,38 @@ const SignupPage = ({ isDark }) => {
               >
                 Confirm Password
               </label>
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                id="confirmPassword"
-                className={`w-full px-4 py-3 rounded-lg border pr-12 focus:outline-none focus:border-[#E50914] ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-white' : 'bg-white border-[#bbb] text-[#111]'}`}
-                value={confirmPassword}
-                placeholder="Confirm Password"
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-              {errors.confirm && <p className="text-red-500 text-sm mt-1">{errors.confirm}</p>}
-              <button
-                type="button"
-                className="absolute top-10 right-4 p-1 focus:outline-none"
-                tabIndex={-1}
-                onClick={() => setShowConfirmPassword((prev) => !prev)}
-                aria-label={
-                  showConfirmPassword ? "Hide password" : "Show password"
-                }
-              >
-                <EyeIcon visible={showConfirmPassword} />
-              </button>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  className={`w-full px-4 py-3 rounded-lg border pr-12 focus:outline-none focus:ring-2 focus:ring-[#E50914] focus:border-[#E50914] transition-all ${isDark ? 'bg-[#111111] border-[#2E2E2E] text-white' : 'bg-white border-[#bbb] text-[#111]'}`}
+                  value={confirmPassword}
+                  placeholder="Re-enter your password"
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                  aria-describedby={errors.confirm ? "confirm-error" : undefined}
+                  aria-invalid={errors.confirm ? "true" : "false"}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute top-1/2 right-3 transform -translate-y-1/2 p-1 focus:outline-none focus:ring-2 focus:ring-[#E50914] rounded"
+                  tabIndex={0}
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  aria-label={
+                    showConfirmPassword ? "Hide password" : "Show password"
+                  }
+                  aria-pressed={showConfirmPassword}
+                >
+                  <EyeIcon visible={showConfirmPassword} />
+                </button>
+              </div>
+              {errors.confirm && (
+                <p id="confirm-error" className="text-red-500 text-sm mt-1" role="alert">
+                  {errors.confirm}
+                </p>
+              )}
             </div>
             <button
               type="submit"

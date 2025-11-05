@@ -294,7 +294,7 @@ export default function ProfilePage({ isDark }) {
             <input
               type="text"
               name="fullname"
-              className={`border rounded-md h-10 p-2 bg-white${
+              className={`border rounded-md h-10 p-2 bg-white ${
                 edit
                   ? "text-gray-800"
                   : "text-gray-500"
@@ -311,7 +311,7 @@ export default function ProfilePage({ isDark }) {
             <input
               type="text"
               name="username"
-              className={`border rounded-md h-10 p-2 bg-white${
+              className={`border rounded-md h-10 p-2 bg-white ${
                 edit
                   ? "text-gray-800"
                   : "text-gray-500"
@@ -328,7 +328,7 @@ export default function ProfilePage({ isDark }) {
           </label>
           <textarea
             name="bio"
-            className={`border rounded-md mt-2 w-full min-h-24 p-2 bg-white${
+            className={`border rounded-md mt-2 w-full min-h-24 p-2 bg-white ${
               edit
                 ? "text-gray-800"
                 : "text-gray-500"
