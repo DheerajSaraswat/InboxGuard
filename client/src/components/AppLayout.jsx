@@ -9,13 +9,19 @@ export default function AppLayout({ isDark }) {
 
   useEffect(() => {
     const handler = (e) => {
-      // Don't trigger shortcuts when user is typing in input fields
+      // Don't trigger shortcuts when user is typing in input fields or editing
       const activeElement = document.activeElement;
       const isInputField = 
         activeElement?.tagName === "INPUT" ||
         activeElement?.tagName === "TEXTAREA" ||
         activeElement?.isContentEditable ||
-        activeElement?.getAttribute("contenteditable") === "true";
+        activeElement?.getAttribute("contenteditable") === "true" ||
+        // Check for TipTap editor
+        activeElement?.closest(".ProseMirror") ||
+        // Check if we're in compose or profile edit mode
+        location.pathname.includes("/compose") ||
+        location.pathname.includes("/profile") ||
+        location.pathname.includes("/settings");
       
       if (isInputField) return;
       

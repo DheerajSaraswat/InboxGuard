@@ -33,35 +33,35 @@ export default function MailCards({ isDark, emails = [], setSelectedEmail, isTra
   };
 
   return (
-    <div className={`flex flex-col gap-8 py-8 px-8 ${isDark ? 'bg-transparent' : 'bg-[#F3F6FA]'}`}>
+    <div className={`flex flex-col gap-4 sm:gap-8 py-4 sm:py-8 px-4 sm:px-8 ${isDark ? 'bg-transparent' : 'bg-[#F3F6FA]'}`}>
       {emails.map(email => (
         <div
           key={email._id}
-          className={`rounded-3xl flex p-4 px-10 cursor-pointer transition-all duration-200 shadow-2xl hover:scale-[1.01] border-2 ${isDark ? 'bg-gradient-to-br from-[#232326]/90 via-[#18181b]/90 to-[#232326]/80 border-[#232326]' : 'bg-white border-[#e5e7eb] '} ${selectedEmails.includes(email._id) ? 'ring-2 ring-blue-500' : ''}`}
+          className={`rounded-xl sm:rounded-3xl flex flex-col sm:flex-row p-3 sm:p-4 sm:px-10 cursor-pointer transition-all duration-200 shadow-xl sm:shadow-2xl hover:scale-[1.01] border-2 ${isDark ? 'bg-gradient-to-br from-[#232326]/90 via-[#18181b]/90 to-[#232326]/80 border-[#232326]' : 'bg-white border-[#e5e7eb] '} ${selectedEmails.includes(email._id) ? 'ring-2 ring-blue-500' : ''}`}
         
           onClick={() => isTrashMode ? onSelectEmail(email._id) : setSelectedEmail(email)}
         >
-          <div className={`flex items-center gap-4`}>
+          <div className={`flex items-center gap-3 sm:gap-4 flex-1 min-w-0`}>
             {isTrashMode && (
               <input
                 type="checkbox"
                 checked={selectedEmails.includes(email._id)}
                 onChange={() => onSelectEmail(email._id)}
-                className="w-4 h-4"
+                className="w-4 h-4 flex-shrink-0"
                 onClick={(e) => e.stopPropagation()}
               />
             )}
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold relative ${isDark ? 'bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-blue-200 ' : 'bg-blue-300 text-white'} text-xl`}>
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold relative flex-shrink-0 ${isDark ? 'bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-blue-200 ' : 'bg-blue-300 text-white'} text-lg sm:text-xl`}>
               {(email.from?.email || "?")[0].toUpperCase()}
               {isDark && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full " />}
             </div>
-            <div className="flex flex-col gap-1">
-              <span className={`text-base font-semibold ${isDark ? 'text-blue-200' : 'text-black'}`}>{email.from?.platformMail}</span>
-              <span className={`font-bold text-xl ${isDark ? 'text-white' : 'text-black'} font-sans`}>{email.subject}</span>
-              <span className={`text-base ${isDark ? 'text-gray-300' : 'text-gray-500'} truncate`} style={{display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '320px'}}>{email.bodyPreview || ''}</span>
+            <div className="flex flex-col gap-1 min-w-0 flex-1">
+              <span className={`text-sm sm:text-base font-semibold truncate ${isDark ? 'text-blue-200' : 'text-black'}`}>{email.from?.platformMail}</span>
+              <span className={`font-bold text-base sm:text-xl ${isDark ? 'text-white' : 'text-black'} font-sans truncate`}>{email.subject}</span>
+              <span className={`text-xs sm:text-base ${isDark ? 'text-gray-300' : 'text-gray-500'} truncate`}>{email.bodyPreview || ''}</span>
             </div>
           </div>
-          <div className="flex ml-auto flex-col gap-2 min-w-[140px] items-end">
+          <div className="flex sm:ml-auto flex-row sm:flex-col gap-2 sm:min-w-[140px] items-center sm:items-end mt-2 sm:mt-0">
             <div className="flex flex-col justify-between items-end gap-2">
               {/* Action buttons */}
               {!isTrashMode && (

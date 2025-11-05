@@ -48,7 +48,7 @@ export const googleAuth = async (rememberMe) => {
     const user = result.user;
 
     const token = await getIdToken(user, true);
-    toast.success("Google sign-in successful!");
+    // Don't show toast here - let the calling component handle it
     return {
       accessToken: token,
       displayName: user.displayName,

@@ -67,7 +67,6 @@ const EyeIcon = ({ visible, size = 24, color = "#b2b0b0ff" }) => (
 
 const SigninPage = ({ isDark }) => {
   const navigate = useNavigate();
-  const [imageLoaded, setImageLoaded] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

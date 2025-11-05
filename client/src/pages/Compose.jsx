@@ -72,6 +72,7 @@ const EmailEditor = ({ isDark }) => {
   const [showAlert, setShowAlert] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const dragCounter = useRef(0);
   const [isEditorDragging, setIsEditorDragging] = useState(false);
 
@@ -286,14 +287,23 @@ const EmailEditor = ({ isDark }) => {
     const htmlContent = editor ? editor.getHTML() : "";
 
     try {
-      // Call ML model to detect phishing
-      const mlApiUrl =
-        import.meta.env.VITE_API_BASE_URL;
-      // Ensure URL doesn't have trailing slash
+      // Call ML model directly from frontend to save time
+      const mlApiUrl = import.meta.env.VITE_ML_API_URL || "https://inboxguard-production.up.railway.app";
       const baseUrl = mlApiUrl.replace(/\/$/, "");
-      const response = await axios.post(`${baseUrl}/api/ml/phish`, {
-        email_text: text,
-      });
+      
+      console.log(`Calling ML API directly at: ${baseUrl}/classify`);
+      
+      const response = await axios.post(
+        `${baseUrl}/classify`,
+        { email_text: text },
+        {
+          timeout: 25000, // 25 seconds timeout
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
       console.log("ML Model Response:", response.data);
       setIsScanning(false);
 
@@ -350,9 +360,17 @@ const EmailEditor = ({ isDark }) => {
     } catch (error) {
       console.error("Phishing scan error:", error);
       setIsScanning(false);
-      // If ML model fails, ask user if they want to send anyway
+      
+      // Show user-friendly error message
+      const errorMessage = error.code === "ECONNABORTED" 
+        ? "Phishing scan timed out. The ML model may be slow or unavailable."
+        : error.response?.data?.message || error.message || "Phishing scan failed.";
+      
+      toast.error(errorMessage);
+      
+      // If ML model fails or times out, ask user if they want to send anyway
       const shouldSend = window.confirm(
-        "Phishing scan failed. Do you want to send anyway?"
+        `${errorMessage}\n\nDo you want to send the email anyway?`
       );
       if (shouldSend) {
         await sendEmail();
@@ -361,6 +379,7 @@ const EmailEditor = ({ isDark }) => {
   };
 
   const sendEmail = async (phishingReport = null) => {
+    setIsSending(true);
     try {
       const htmlBody = editor ? editor.getHTML() : emailContent;
       const encrypted = await encryptEmailAndAttachments({
@@ -441,6 +460,8 @@ const EmailEditor = ({ isDark }) => {
       } else {
         toast.error("Failed to send email");
       }
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -719,7 +740,7 @@ const EmailEditor = ({ isDark }) => {
             </button>
             <button
               onClick={handleSendEmail}
-              disabled={isScanning}
+              disabled={isScanning || isSending}
               className={`${
                 isDark
                   ? "bg-[#8ab4f8] hover:bg-[#7ba3f7] text-[#202124]"
@@ -730,6 +751,11 @@ const EmailEditor = ({ isDark }) => {
                 <>
                   <Shield size={16} className="animate-pulse" />
                   <span className="hidden sm:inline">Scanning...</span>
+                </>
+              ) : isSending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="hidden sm:inline">Sending...</span>
                 </>
               ) : (
                 <>
@@ -777,7 +803,7 @@ const EmailEditor = ({ isDark }) => {
               </button>
               <button
                 onClick={handleSendEmail}
-                disabled={isScanning}
+                disabled={isScanning || isSending}
                 className={`${
                   isDark
                     ? "bg-[#8ab4f8] hover:bg-[#7ba3f7] text-[#202124]"
@@ -787,7 +813,12 @@ const EmailEditor = ({ isDark }) => {
                 {isScanning ? (
                   <>
                     <Shield size={16} className="animate-pulse" />
-                    <span>Send</span>
+                    <span>Scanning...</span>
+                  </>
+                ) : isSending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Sending...</span>
                   </>
                 ) : (
                   <>

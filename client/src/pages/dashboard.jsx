@@ -116,19 +116,18 @@ export default function Dashboard() {
   return (
       <div className="flex-1 flex flex-col min-h-0">
         <div
-          className={`border-b p-4 ${
+          className={`border-b p-2 sm:p-4 ${
             isDark ? "bg-[#232326]" : "bg-white"
           } border-gray-200`}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 flex-1">
-              <div className="relative flex-1 max-w-md">
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${isDark ? 'text-[#9aa0a6]' : 'text-[#bdbdbd]'}`} />
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+              <div className="relative flex-1 max-w-md min-w-0">
+                <Search className={`absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${isDark ? 'text-[#9aa0a6]' : 'text-[#bdbdbd]'}`} />
                 <input
                   placeholder="Search emails..."
-                  className={`pl-10 py-2 w-full rounded-lg border ${isDark ? 'bg-[#303134] border-[#5f6368] text-[#e8eaed] placeholder-[#9aa0a6]' : 'bg-white border-gray-300 text-[#111] placeholder-gray-400'}`}
+                  className={`pl-8 sm:pl-10 py-1.5 sm:py-2 w-full rounded-lg border text-sm sm:text-base ${isDark ? 'bg-[#303134] border-[#5f6368] text-[#e8eaed] placeholder-[#9aa0a6]' : 'bg-white border-gray-300 text-[#111] placeholder-gray-400'}`}
                   style={{
-                    fontSize: "1rem",
                     fontFamily:
                       'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
                   }}
@@ -137,7 +136,7 @@ export default function Dashboard() {
                 />
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
               <button
                 className={`bg-transparent p-2 rounded-full hover:${
                   isDark ? "bg-[#232326]" : "bg-[#f3f4f6]"
@@ -232,11 +231,11 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-        <div className="flex-1 flex min-h-0">
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0">
           {/* Gmail-style: Split view - Email list on left, detail on right when selected */}
           <div
             className={`flex flex-col min-h-0 transition-all duration-300 ${
-              selectedEmail ? "w-1/3 lg:w-2/5" : "flex-1"
+              selectedEmail ? "hidden lg:flex lg:w-1/3 xl:w-2/5" : "flex-1"
             } ${isDark ? "bg-[#18181b]" : "bg-white"} border-r border-gray-200`}
           >
             <div
@@ -293,14 +292,27 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Email Detail Panel */}
+          {/* Email Detail Panel - Desktop */}
           {selectedEmail && (
-            <MailDetail
-              email={selectedEmail}
-              isDark={isDark}
-              onBack={() => setSelectedEmail(null)}
-              onDelete={() => handleDeleteEmail(selectedEmail)}
-            />
+            <div className="hidden lg:flex flex-1 min-h-0">
+              <MailDetail
+                email={selectedEmail}
+                isDark={isDark}
+                onBack={() => setSelectedEmail(null)}
+                onDelete={() => handleDeleteEmail(selectedEmail)}
+              />
+            </div>
+          )}
+          {/* Mobile: Show email detail as full screen when selected */}
+          {selectedEmail && (
+            <div className={`lg:hidden fixed inset-0 z-50 ${isDark ? 'bg-[#18181b]' : 'bg-white'}`}>
+              <MailDetail
+                email={selectedEmail}
+                isDark={isDark}
+                onBack={() => setSelectedEmail(null)}
+                onDelete={() => handleDeleteEmail(selectedEmail)}
+              />
+            </div>
           )}
         </div>
       </div>

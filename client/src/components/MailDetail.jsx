@@ -170,11 +170,12 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <div
-          className={`prose prose-sm max-w-none leading-relaxed text-sm ${
+          className={`prose prose-sm max-w-none leading-relaxed text-sm break-words overflow-wrap-anywhere ${
             isDark ? "text-[#f3f4f6]" : "text-[#111]"
           }`}
+          style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
           dangerouslySetInnerHTML={{ __html: email.body }}
         />
 

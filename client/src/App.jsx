@@ -104,8 +104,6 @@ function App() {
           <Route path="/user/u0/dashboard" element={<Dashboard isDark={isDark} />}/>
           <Route path="/user/u0/compose" element={<Compose isDark={isDark}/>} />
           <Route path="/user/u0/email/:id" element={<EmailViewer isDark={isDark} />} />
-          <Route path="/user/u0/profile" element={<ProfilePage isDark={isDark} />} />
-          <Route path="/user/u0/settings" element={<SettingsPage isDark={isDark} />} />
           <Route path="/drafts" element={<DraftsPage />} />
           <Route path="/sent" element={<SentPage isDark={isDark} />} />
           <Route path="/starred" element={<StarredPage isDark={isDark} />} />
@@ -114,6 +112,23 @@ function App() {
           <Route path="/spam" element={<SpamPage isDark={isDark} />} />
           <Route path="/trash" element={<TrashPage isDark={isDark} />} />
         </Route>
+        {/* Profile and Settings pages without sidebar */}
+        <Route
+          path="/user/u0/profile"
+          element={
+            <AnimationWrapper>
+              <ProfilePage isDark={isDark} />
+            </AnimationWrapper>
+          }
+        />
+        <Route
+          path="/user/u0/settings"
+          element={
+            <AnimationWrapper>
+              <SettingsPage isDark={isDark} />
+            </AnimationWrapper>
+          }
+        />
         <Route path="*" element={<NotFound isDark={isDark} />} />
       </Routes>
     </div>
