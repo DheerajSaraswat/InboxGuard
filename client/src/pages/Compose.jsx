@@ -287,10 +287,11 @@ const EmailEditor = ({ isDark }) => {
 
     try {
       // Call ML model to detect phishing
-      const mlApiUrl = import.meta.env.VITE_ML_API_URL || "https://inboxguard-production.up.railway.app";
+      const mlApiUrl =
+        import.meta.env.VITE_API_BASE_URL;
       // Ensure URL doesn't have trailing slash
       const baseUrl = mlApiUrl.replace(/\/$/, "");
-      const response = await axios.post(`${baseUrl}/classify`, {
+      const response = await axios.post(`${baseUrl}/api/ml/phish`, {
         email_text: text,
       });
       console.log("ML Model Response:", response.data);
