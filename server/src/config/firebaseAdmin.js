@@ -1,4 +1,7 @@
 import admin from "firebase-admin";
+import dotenv from "dotenv";
+
+dotenv.config({ path: "././.env" });
 
 if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
   console.error("Missing FIREBASE_SERVICE_ACCOUNT in environment variables");
