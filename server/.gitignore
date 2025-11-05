@@ -11,6 +11,11 @@ pnpm-debug.log*
 .env
 .env.*
 
+# Firebase service account keys
+serviceAccountKey.json
+*.json
+
+
 # OS
 .DS_Store
 Thumbs.db
