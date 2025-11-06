@@ -9,22 +9,26 @@ import {
   Forward,
   Star,
 } from "lucide-react";
+import { base64ToArrayBuffer, getLocalPrivateKey } from "../utils/crypto.js";
+import { useSelector } from "react-redux";
 
 export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = false }) {
   const [previewAttachment, setPreviewAttachment] = useState(null);
   const navigate = useNavigate();
-  console.log(email);
+
+  const {user, token} = useSelector((state)=>state.auth)
+  
   if (!email) return null;
 
   const handleReply = () => {
     const originalSubject = email.subject || '';
     const replySubject = originalSubject.startsWith('Re: ') ? originalSubject : `Re: ${originalSubject}`;
-    const recipientEmail = email.from?.email || '';
+    const recipientEmail = email.from?.platformMail || '';
     
     // Create reply content with quoted original message
     const replyContent = `<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
       <p style="color: #666; font-size: 12px; margin-bottom: 10px;">
-        On ${new Date(email.createdAt).toLocaleString()}, ${email.from?.email} wrote:
+        On ${new Date(email.createdAt).toLocaleString()}, ${email.from?.platformMail} wrote:
       </p>
       <blockquote style="margin: 0; padding-left: 15px; border-left: 3px solid #e0e0e0; color: #666;">
         ${email.body}
@@ -42,7 +46,7 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
     const forwardContent = `<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
       <p style="color: #666; font-size: 12px; margin-bottom: 10px;">
         ---------- Forwarded message ---------<br/>
-        From: ${email.from?.email || 'Unknown'}<br/>
+        From: ${email.from?.platformMail || 'Unknown'}<br/>
         Date: ${new Date(email.createdAt).toLocaleString()}<br/>
         Subject: ${email.subject || 'No Subject'}<br/>
         To: ${email.to?.map(t => t.user?.email || t.email).join(', ') || 'Unknown'}
@@ -54,6 +58,76 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
     
     navigate(`/user/u0/compose?forward=true&subject=${encodeURIComponent(forwardSubject)}&body=${encodeURIComponent(forwardContent)}&emailId=${email._id}`);
   };
+
+  const handleDownloadAttachment = async(emailId, idx, name) => {
+    try {
+      const apiUrl = `/emails/${emailId}/attachments/${idx}/meta`;
+      const base = (
+        api?.defaults?.baseURL ||
+        import.meta.env.VITE_API_BASE_URL ||
+        ""
+      ).replace(/\/$/, "");
+      const endpoint = `${base}${apiUrl}`;
+
+      // 1️⃣ Fetch encrypted attachment metadata
+      const metaRes = await fetch(endpoint, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!metaRes.ok) throw new Error("Failed to get attachment metadata");
+      const { attachment } = await metaRes.json();
+
+      if (!attachment?.encryptedAESKey) {
+        throw new Error("Missing encrypted AES key for this attachment");
+      }
+
+      // 2️⃣ Get local private key (cached or from IndexedDB)
+      const privateKey = await getLocalPrivateKey(user.firebaseUid);
+
+      // 3️⃣ Decrypt AES key
+      const encryptedKeyBuf = base64ToArrayBuffer(attachment.encryptedAESKey);
+      const aesKeyRaw = await window.crypto.subtle.decrypt(
+        { name: "RSA-OAEP" },
+        privateKey,
+        encryptedKeyBuf
+      );
+
+      // 4️⃣ Import AES key
+      const aesKey = await window.crypto.subtle.importKey(
+        "raw",
+        aesKeyRaw,
+        { name: "AES-GCM" },
+        false,
+        ["decrypt"]
+      );
+
+      // 5️⃣ Fetch encrypted file from Cloudinary
+      const encRes = await fetch(attachment.cloudinaryUrl);
+      if (!encRes.ok) throw new Error("Failed to fetch encrypted file");
+      const cipherBuf = await encRes.arrayBuffer();
+
+      // 6️⃣ Decrypt file
+      const iv = base64ToArrayBuffer(attachment.ivB64);
+      const plainBuf = await window.crypto.subtle.decrypt(
+        { name: "AES-GCM", iv },
+        aesKey,
+        cipherBuf
+      );
+
+      // 7️⃣ Trigger download
+      const blob = new Blob([plainBuf], { type: attachment.mimeType });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = attachment.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    } catch (err) {
+      console.error("Decryption failed:", err);
+      alert("Failed to decrypt or download the file.");
+    }
+  }
+
 
   return (
     <div
@@ -158,7 +232,7 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
                 isDark ? "text-[#f3f4f6]" : "text-[#111]"
               }`}
             >
-              {email.from?.email}
+              {email.from?.platformMail}
             </div>
             <div
               className={`text-xs ${
@@ -216,12 +290,27 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
                       }`}
                     >
                       {isImage ? (
-                        <button onClick={() => setPreviewAttachment({ ...att, url })} className="shrink-0">
-                          <img src={url} alt={name} className="w-16 h-16 object-cover rounded" crossOrigin="anonymous" />
+                        <button
+                          onClick={() => setPreviewAttachment({ ...att, url })}
+                          className="shrink-0"
+                        >
+                          <img
+                            src={url}
+                            alt={name}
+                            className="w-16 h-16 object-cover rounded"
+                            crossOrigin="anonymous"
+                          />
                         </button>
                       ) : isVideo ? (
-                        <button onClick={() => setPreviewAttachment({ ...att, url })} className="shrink-0">
-                          <video className="w-24 h-16 rounded" src={url} crossOrigin="anonymous" />
+                        <button
+                          onClick={() => setPreviewAttachment({ ...att, url })}
+                          className="shrink-0"
+                        >
+                          <video
+                            className="w-24 h-16 rounded"
+                            src={url}
+                            crossOrigin="anonymous"
+                          />
                         </button>
                       ) : (
                         <div
@@ -249,7 +338,7 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
                             }`}
                           >
                             {Math.round(
-                              ((att.fileSize || att.originalSize) / 1024) || 0
+                              (att.fileSize || att.originalSize) / 1024 || 0
                             )}{" "}
                             KB
                           </div>
@@ -271,42 +360,9 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
                           </button>
                         )}
                         <button
-                          onClick={async () => {
-                            const apiUrl = `/emails/${email._id}/attachments/${idx}/download`;
-                            const base = (api?.defaults?.baseURL || import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
-                            const endpoint = `${base}${apiUrl}`;
-                            try {
-                              const auth = getAuth();
-                              const token = await auth.currentUser?.getIdToken?.(false);
-                              const res = await fetch(endpoint, {
-                                credentials: "include",
-                                headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-                              });
-                              if (!res.ok) throw new Error("proxy download failed");
-                              const blob = await res.blob();
-                              const a = document.createElement("a");
-                              const objectUrl = URL.createObjectURL(blob);
-                              a.href = objectUrl;
-                              a.download = name;
-                              document.body.appendChild(a);
-                              a.click();
-                              a.remove();
-                              URL.revokeObjectURL(objectUrl);
-                            } catch (e) {
-                              // Fallback: open the direct file URL in a new tab
-                              const direct = url;
-                              if (direct) {
-                                const a = document.createElement("a");
-                                a.href = direct;
-                                a.target = "_blank";
-                                a.rel = "noopener noreferrer";
-                                a.download = name;
-                                document.body.appendChild(a);
-                                a.click();
-                                a.remove();
-                              }
-                            }
-                          }}
+                          onClick={() =>
+                            handleDownloadAttachment(email._id, idx, name)
+                          }
                           className="text-xs px-3 py-1.5 rounded bg-[#E50914] text-white hover:bg-[#c40812] transition border border-[#E50914]"
                         >
                           Download

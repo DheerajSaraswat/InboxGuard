@@ -5,7 +5,6 @@ import { resetPassword } from "../../common/firebase";
 function ForgotPasswordPage() {
 
     const [email, setEmail] = useState("");
-    console.log(email);
     const handleResetPassword = async(e)=>{
         e.preventDefault();
         if(!email){

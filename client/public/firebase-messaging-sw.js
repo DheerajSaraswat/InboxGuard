@@ -23,11 +23,6 @@ const messaging = firebase.messaging();
 // Since your backend sends a 'notification' payload, the SDK automatically
 // displays the browser's native notification pop-up using your title/body.
 messaging.onBackgroundMessage((payload) => {
-  console.log(
-    "[firebase-messaging-sw.js] Background message received:",
-    payload
-  );
-
   // The payload.data will contain { emailId: '...' }
   const notificationTitle = payload.notification.title;
   const notificationOptions = {

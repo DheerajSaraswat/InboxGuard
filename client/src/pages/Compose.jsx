@@ -291,8 +291,6 @@ const EmailEditor = ({ isDark }) => {
       const mlApiUrl = import.meta.env.VITE_ML_API_URL || "https://inboxguard-production.up.railway.app";
       const baseUrl = mlApiUrl.replace(/\/$/, "");
       
-      console.log(`Calling ML API directly at: ${baseUrl}/classify`);
-      
       const response = await axios.post(
         `${baseUrl}/classify`,
         { email_text: text },
@@ -303,8 +301,7 @@ const EmailEditor = ({ isDark }) => {
           }
         }
       );
-      
-      console.log("ML Model Response:", response.data);
+
       setIsScanning(false);
 
       // Check if phishing detected (using classification or is_phishing)
@@ -343,12 +340,19 @@ const EmailEditor = ({ isDark }) => {
           riskLevel: riskLevel,
         };
 
-        // Show warning alert for all phishing detections (low, medium, high)
+        if (phishingReport.riskLevel === "low") {
+          await sendEmail(phishingReport);
+          return;
+        }
+
+        // Medium/High risk — show phishing alert
         setScanResult({
           riskLevel: phishingReport.riskLevel,
-          indicators: phishingReport.analysis.detectedPatterns.map((pattern) => ({
-            description: pattern,
-          })),
+          indicators: phishingReport.analysis.detectedPatterns.map(
+            (pattern) => ({
+              description: pattern,
+            })
+          ),
           phishingReport,
         });
         setShowAlert(true);
@@ -416,7 +420,6 @@ const EmailEditor = ({ isDark }) => {
         encryptedKeys: encrypted.encryptedKeys,
         phishingReport: formattedPhishingReport,
       };
-      console.log("Sending email with payload:", payload);
       const { data } = await api.post("/emails/sendMail", payload, {
         headers: { "Content-Type": "application/json" },
       });
@@ -476,6 +479,7 @@ const EmailEditor = ({ isDark }) => {
   const handleReview = () => setShowAlert(false);
 
   const handleSaveDraft = async () => {
+    console.log("clicked");
     try {
       const draft = {
         to: recipients,
@@ -486,6 +490,7 @@ const EmailEditor = ({ isDark }) => {
 
       // Save to server
       const { saveDraft } = await import("../apiRequests/saveDraft");
+      console.log("hlo");
       await saveDraft(draft);
 
       // Also save to localStorage as backup

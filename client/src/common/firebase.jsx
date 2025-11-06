@@ -43,7 +43,6 @@ export const googleAuth = async (rememberMe) => {
 
     await setPersistence(auth, persistence);
 
-    console.log("Google Authentication.....");
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
 
@@ -128,7 +127,6 @@ export const login = async (email, password, rememberMe) => {
     
     const token = await getIdToken(user, true);
 
-    toast.success("Login successful!");
     return {
       accessToken: token,
       displayName: user.displayName,
@@ -157,7 +155,6 @@ export const resetPassword = async (email) => {
 export const logout = async () => {
   try {
     await auth.signOut();
-    toast.success("Logged out successfully!");
   } catch (error) {
     console.log(error);
     toast.error(error.message || "Logout failed.");
@@ -173,7 +170,6 @@ export const requestForToken = async()=>{
         vapidKey: import.meta.env.VITE_FIREBASE_VAPIDKEY,
       });
       if(currentToken){
-        console.log("FCM Token: ", currentToken);
         await api.post("/users/update-fcm-token",{
           token: currentToken
         })
@@ -193,7 +189,7 @@ export const onMessageListener = () =>
   new Promise((resolve) => {
     // This listener fires when the user is actively using your website.
     onMessage(messaging, (payload) => {
-      console.log("Foreground Message Received:", payload);
+      
       // Manually handle the display (e.g., show a toast or an in-app banner)
       // The browser's native notification will NOT show in the foreground.
       resolve(payload);

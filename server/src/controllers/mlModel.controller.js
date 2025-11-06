@@ -28,7 +28,6 @@ const getReport = asyncHandler(async (req, res) => {
     }
     
     const mlApiUrl = process.env.ML_API_URL || "http://127.0.0.1:8000";
-    console.log(`ML API URL: ${mlApiUrl}`);
     
     // Check ML API health first
     const isHealthy = await checkMLAPIHealth(mlApiUrl);
@@ -43,7 +42,6 @@ const getReport = asyncHandler(async (req, res) => {
     }
     
     try {
-        console.log(`Calling ML API at: ${mlApiUrl}/classify`);
         
         // Call ML model with longer timeout (25 seconds)
         const response = await axios.post(
@@ -57,7 +55,6 @@ const getReport = asyncHandler(async (req, res) => {
             }
         );
         
-        console.log("ML API Response:", response.data);
         
         // Return the ML model response directly to frontend
         return res.status(200).json(response.data);

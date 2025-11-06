@@ -40,12 +40,10 @@ export default function DraftsPage() {
   const handleLogOut = async (e) => {
     e.preventDefault();
     try {
-      console.log("Logging out...");
       await logout();
       dispatch(sliceLogout());
       toast.success("Logged out successfully");
       navigate("/signin");
-      console.log("Logging out");
     } catch (error) {
       toast.error("Error logging out");
     }
@@ -83,7 +81,7 @@ export default function DraftsPage() {
       const auth = getAuth();
       await auth.currentUser?.getIdToken(false);
       const list = await showEmailLists("drafts");
-      setDrafts(Array.isArray(list) ? list : []);
+      setDrafts(Array.isArray(list.emails) ? list.emails : []);
     } catch (e) {
       console.error("Failed to load drafts:", e);
       toast.error("Failed to load drafts");

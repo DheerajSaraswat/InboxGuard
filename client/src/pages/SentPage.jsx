@@ -37,12 +37,10 @@ export default function SentPage() {
   const handleLogOut = async (e) => {
     e.preventDefault();
     try {
-      console.log("Logging out...");
       await logout();
       dispatch(sliceLogout());
       toast.success("Logged out successfully");
       navigate("/signin");
-      console.log("Logged out");
     } catch (error) {
       toast.error("Error logging out");
     }

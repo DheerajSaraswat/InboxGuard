@@ -283,7 +283,6 @@ const getSecuritySettings = asyncHandler(async (req, res) => {
 
 // Save FCM token for push notifications
 const saveFcmToken = asyncHandler(async (req, res) => {
-  console.log("hello");
   const { token } = req.body;
   const { user_id } = req.user;
   if (!token) return res.status(400).json({ message: "token required" });

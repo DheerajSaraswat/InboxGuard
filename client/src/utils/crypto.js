@@ -4,7 +4,7 @@ import { uploadPublicKeyToServer } from "../apiRequests/uploadPublicKeyToServer"
 function bufToBase64(buf) {
   return btoa(String.fromCharCode(...new Uint8Array(buf)));
 }
-function base64ToArrayBuffer(b64) {
+export function base64ToArrayBuffer(b64) {
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
 }
 

@@ -37,23 +37,27 @@ export const decryptText = (cipherB64) => {
 };
 
 // Decrypt a binary buffer (ciphertext + authTag) with a provided IV (base64 or Buffer)
-export const decryptBuffer = (cipherWithTagBuf, ivB64OrBuf) => {
-  const key = getKey();
-  const iv = Buffer.isBuffer(ivB64OrBuf)
-    ? ivB64OrBuf
-    : Buffer.from(String(ivB64OrBuf || ''), 'base64');
-  if (iv.length !== 12) {
-    throw new Error('Invalid IV length for AES-256-GCM (expected 12 bytes)');
-  }
-  if (!Buffer.isBuffer(cipherWithTagBuf) || cipherWithTagBuf.length < 17) {
-    throw new Error('Invalid ciphertext buffer');
-  }
+export function decryptBuffer(cipherWithTagBuf, ivB64, aesKeyBuf) {
+  const iv = Buffer.from(ivB64, "base64");
+  if (iv.length !== 12) throw new Error("Invalid IV length for AES-256-GCM");
+
   const authTag = cipherWithTagBuf.subarray(cipherWithTagBuf.length - 16);
   const ciphertext = cipherWithTagBuf.subarray(0, cipherWithTagBuf.length - 16);
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-  decipher.setAuthTag(authTag);
-  const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-  return plaintext;
-};
 
+  const decipher = crypto.createDecipheriv("aes-256-gcm", aesKeyBuf, iv);
+  decipher.setAuthTag(authTag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+}
+
+export function decryptAESKey(encryptedAESKeyB64, privateKeyPem) {
+  const buffer = Buffer.from(encryptedAESKeyB64, "base64");
+  return crypto.privateDecrypt(
+    {
+      key: privateKeyPem,
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256",
+    },
+    buffer
+  );
+}
 
