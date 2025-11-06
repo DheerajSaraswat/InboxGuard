@@ -16,10 +16,13 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
+import { useNavigate } from "react-router-dom";
 
 const HomePage = ({ isDark }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeFeature, setActiveFeature] = useState(null);
+
+  const Navigate = useNavigate();
 
   const features = [
     {
