@@ -88,12 +88,12 @@ export default function MailCards({ isDark, emails = [], setSelectedEmail, isTra
                   >
                     <Archive size={16} />
                   </button>
+                  {/* No per-item restore in Trash mode (bulk restore available in header) */}
+                  {/* Unread indicator */}
+                  {(!email.to?.[0]?.readAt) && (
+                    <span className="bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs whitespace-nowrap">New</span>
+                  )}
                 </div>
-              )}
-              {/* No per-item restore in Trash mode (bulk restore available in header) */}
-              {/* Unread indicator */}
-              {(!email.to?.[0]?.readAt) && (
-                <span className="bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs whitespace-nowrap">New</span>
               )}
               {(() => {
                 const level = String(email.securityAnalysis?.riskLevel || '').toLowerCase();

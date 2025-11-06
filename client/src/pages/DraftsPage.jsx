@@ -4,7 +4,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
-  MoreHorizontal,
   Search,
   Moon,
   Sun,
@@ -252,15 +251,6 @@ export default function DraftsPage() {
                 <FileText className="w-8 h-8 text-blue-500" />
                 <h2 className="text-4xl font-bold">Drafts</h2>
               </div>
-              <button
-                className={`bg-transparent p-2 rounded-full transition-colors ${
-                  isDark ? "hover:bg-[#18181b]" : "hover:bg-[#f3f4f6]"
-                }`}
-              >
-                <MoreHorizontal
-                  className={`w-4 h-4 ${isDark ? "text-[#bdbdbd]" : "text-[#111]"}`}
-                />
-              </button>
             </div>
           </div>
           <div

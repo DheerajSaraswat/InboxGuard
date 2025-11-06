@@ -1,6 +1,5 @@
 import {
   ChevronDown,
-  MoreHorizontal,
   Search,
   Trash2,
   User,
@@ -245,9 +244,6 @@ export default function Dashboard() {
             >
               <div className="flex items-center justify-between">
                 <h2 className="text-4xl font-bold">Inbox</h2>
-                <button className="bg-transparent p-2 rounded-full hover:bg-[#f3f4f6]">
-                  <MoreHorizontal className="w-4 h-4 text-[#111]" />
-                </button>
               </div>
             </div>
             <div

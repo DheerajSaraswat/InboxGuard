@@ -3,7 +3,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
-  MoreHorizontal,
   Search,
   Trash2,
   User,
@@ -360,9 +359,6 @@ export default function TrashPage() {
                     </button>
                     </>
                   )}
-                  <button className="bg-transparent p-2 rounded-full hover:bg-[#f3f4f6]">
-                    <MoreHorizontal className="w-4 h-4 text-[#111]" />
-                  </button>
                 </div>
               </div>
             </div>

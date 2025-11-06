@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, MoreHorizontal, Search, User, LogOut, Moon, Sun, UserCircle, Send } from "lucide-react";
+import { ChevronDown, Search, User, LogOut, Moon, Sun, UserCircle, Send } from "lucide-react";
 // Sidebar is provided by AppLayout
 import MailCards from "../components/MailCards";
 import toast from "react-hot-toast";
@@ -224,15 +224,6 @@ export default function SentPage() {
                   <Send className="w-8 h-8 text-green-500" />
                   <h2 className="text-4xl font-bold">Sent</h2>
                 </div>
-                <button
-                  className={`bg-transparent p-2 rounded-full transition-colors ${
-                    isDark ? "hover:bg-[#18181b]" : "hover:bg-[#f3f4f6]"
-                  }`}
-                >
-                  <MoreHorizontal
-                    className={`w-4 h-4 ${isDark ? "text-[#bdbdbd]" : "text-[#111]"}`}
-                  />
-                </button>
               </div>
             </div>
             <div

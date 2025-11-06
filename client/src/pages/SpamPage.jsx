@@ -3,7 +3,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
   ChevronDown,
-  MoreHorizontal,
   Search,
   User,
   LogOut,
@@ -335,17 +334,6 @@ export default function SpamPage({ isDark: isDarkProp }) {
                       <span className="hidden sm:inline">{isEmptying ? "Emptying…" : "Empty Spam"}</span>
                     </button>
                   )}
-                  <button
-                    className={`bg-transparent p-2 rounded-full transition-colors ${
-                      isDark ? "hover:bg-[#303134]" : "hover:bg-[#f3f4f6]"
-                    }`}
-                  >
-                    <MoreHorizontal
-                      className={`w-4 h-4 ${
-                        isDark ? "text-[#e8eaed]" : "text-[#111]"
-                      }`}
-                    />
-                  </button>
                 </div>
               </div>
 
