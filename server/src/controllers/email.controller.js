@@ -5,7 +5,7 @@ import { PhishingReport } from "../schema/phishingReport.schema.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import crypto from "crypto";
 import admin from "../config/firebaseAdmin.js";
-import { encryptText, decryptText } from "../utils/encryption.js";
+import { encryptText, decryptText, decryptBuffer } from "../utils/encryption.js";
 import { Readable } from "stream";
 import axios from "axios";
 
@@ -704,16 +704,41 @@ const downloadAttachment = asyncHandler(async (req, res) => {
   const url = att.cloudinaryUrl;
   if (!url) return res.status(400).json({ message: "Attachment URL missing" });
 
-  const name = att.fileName || att.originalName || `attachment-${index+1}`;
+  const rawName = att.fileName || att.originalName || `attachment-${index+1}`;
+  const name = rawName.endsWith('.enc') ? rawName.slice(0, -4) : rawName;
   try {
     const response = await fetch(url, { redirect: "follow" });
-    if (!response.ok || !response.body) {
+    if (!response.ok) {
       return res.status(502).json({ message: "Failed to fetch attachment" });
     }
-    res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
-    res.setHeader("Content-Type", att.mimeType || response.headers.get("content-type") || "application/octet-stream");
 
-    const nodeStream = Readable.fromWeb(response.body);
+    // Decrypt if encrypted
+    if (att.ivB64) {
+      const arrayBuffer = await response.arrayBuffer();
+      const cipherBuf = Buffer.from(arrayBuffer);
+      try {
+        const plainBuf = decryptBuffer(cipherBuf, att.ivB64);
+        res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
+        res.setHeader("Content-Type", att.mimeType || "application/octet-stream");
+        res.setHeader("Content-Length", String(plainBuf.length));
+        return res.end(plainBuf);
+      } catch (e) {
+        console.error("Attachment decrypt error:", e.message);
+        return res.status(500).json({ message: "Failed to decrypt attachment" });
+      }
+    }
+
+    // Otherwise stream as-is
+    res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
+    res.setHeader(
+      "Content-Type",
+      att.mimeType || response.headers.get("content-type") || "application/octet-stream"
+    );
+    const body = response.body;
+    if (!body) {
+      return res.status(502).json({ message: "Failed to fetch attachment" });
+    }
+    const nodeStream = Readable.fromWeb(body);
     nodeStream.pipe(res);
   } catch (e) {
     console.error("Download proxy error:", e.message);

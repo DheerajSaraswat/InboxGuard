@@ -184,7 +184,7 @@ export default function TrashPage() {
   }
 
   return (
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-x-hidden">
         <div
           className={`border-b p-4 ${
             isDark ? "bg-[#232326]" : "bg-white"
@@ -311,9 +311,9 @@ export default function TrashPage() {
             </div>
           </div>
         </div>
-        <div className="flex-1 flex border-l border-gray-200 min-h-0">
+        <div className="flex-1 flex border-l border-gray-200 min-h-0 min-w-0 overflow-x-hidden">
           <div
-            className={`flex-1 flex flex-col min-h-0 ${
+            className={`flex-1 flex flex-col min-h-0 min-w-0 ${
               isDark ? "bg-[#18181b]" : "bg-white"
             }`}
           >
@@ -363,7 +363,7 @@ export default function TrashPage() {
               </div>
             </div>
             <div
-              className={`flex-1 overflow-y-auto ${
+              className={`flex-1 overflow-y-auto min-w-0 ${
                 isDark
                   ? "bg-gradient-to-b from-[#18181b] via-[#232326] to-[#18181b]"
                   : "bg-[#F3F6FA]"

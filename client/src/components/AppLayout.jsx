@@ -42,9 +42,9 @@ export default function AppLayout({ isDark }) {
 
   return (
     <div className={isDark ? "dark" : ""}>
-      <div className={`flex min-h-screen h-screen ${isDark ? "bg-[#18181b] text-[#f3f4f6]" : "bg-[#fafbfc] text-[#111]"}`}>
+      <div className={`flex min-h-screen h-screen overflow-x-hidden ${isDark ? "bg-[#18181b] text-[#f3f4f6]" : "bg-[#fafbfc] text-[#111]"}`}>
         <Sidebar isDark={isDark} />
-        <div className="flex-1 min-h-0 min-w-0 flex flex-col">
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-x-hidden">
           <RouteTransition>
             <Outlet />
           </RouteTransition>

@@ -97,7 +97,7 @@ export default function ArchivePage() {
   }
 
   return (
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-x-hidden">
         <div
           className={`border-b p-4 pl-12 md:pl-4 ${
             isDark ? "bg-[#232326]" : "bg-white"
@@ -214,10 +214,10 @@ export default function ArchivePage() {
             </div>
           </div>
         </div>
-        <div className="flex-1 flex min-h-0">
+        <div className="flex-1 flex min-h-0 min-w-0 overflow-x-hidden">
           {/* Gmail-style: Split view - Email list on left, detail on right when selected */}
           <div
-            className={`flex flex-col min-h-0 transition-all duration-300 ${
+            className={`flex flex-col min-h-0 min-w-0 transition-all duration-300 ${
               selectedEmail ? "w-1/3 lg:w-2/5" : "flex-1"
             } ${
               isDark ? "bg-[#18181b]" : "bg-white"
@@ -236,7 +236,7 @@ export default function ArchivePage() {
               </div>
             </div>
             <div
-              className={`flex-1 overflow-y-auto ${
+              className={`flex-1 overflow-y-auto min-w-0 ${
                 isDark
                   ? "bg-gradient-to-b from-[#18181b] via-[#232326] to-[#18181b]"
                   : "bg-[#F3F6FA]"

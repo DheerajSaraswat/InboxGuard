@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { getAuth } from "firebase/auth";
+import api from "../utils/api";
 import { useNavigate } from "react-router-dom";
 import {
   Trash2,
@@ -174,7 +176,11 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
         <div
           className={`prose prose-sm max-w-none leading-relaxed text-sm break-words overflow-wrap-anywhere ${
             isDark ? "text-[#f3f4f6]" : "text-[#111]"
-          }`}
+          } 
+          prose-a:break-words prose-a:whitespace-pre-wrap
+          prose-blockquote:border-l-4 prose-blockquote:pl-4
+          ${isDark ? "prose-blockquote:text-gray-300 prose-blockquote:border-[#3c4043]" : "prose-blockquote:text-gray-600 prose-blockquote:border-gray-300"}
+          `}
           style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
           dangerouslySetInnerHTML={{ __html: email.body }}
         />
@@ -266,19 +272,17 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
                         )}
                         <button
                           onClick={async () => {
+                            const apiUrl = `/emails/${email._id}/attachments/${idx}/download`;
+                            const base = (api?.defaults?.baseURL || import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+                            const endpoint = `${base}${apiUrl}`;
                             try {
-                              const apiUrl = `/emails/${email._id}/attachments/${idx}/download`;
-                              const res = await fetch(
-                                (
-                                  window.__API_BASE__ ||
-                                  import.meta.env.VITE_API_BASE_URL ||
-                                  ""
-                                ).replace(/\/$/, "") + apiUrl,
-                                {
-                                  credentials: "include",
-                                }
-                              );
-                              if (!res.ok) throw new Error("download failed");
+                              const auth = getAuth();
+                              const token = await auth.currentUser?.getIdToken?.(false);
+                              const res = await fetch(endpoint, {
+                                credentials: "include",
+                                headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+                              });
+                              if (!res.ok) throw new Error("proxy download failed");
                               const blob = await res.blob();
                               const a = document.createElement("a");
                               const objectUrl = URL.createObjectURL(blob);
@@ -288,7 +292,20 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
                               a.click();
                               a.remove();
                               URL.revokeObjectURL(objectUrl);
-                            } catch (e) {}
+                            } catch (e) {
+                              // Fallback: open the direct file URL in a new tab
+                              const direct = url;
+                              if (direct) {
+                                const a = document.createElement("a");
+                                a.href = direct;
+                                a.target = "_blank";
+                                a.rel = "noopener noreferrer";
+                                a.download = name;
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                              }
+                            }
                           }}
                           className="text-xs px-3 py-1.5 rounded bg-[#E50914] text-white hover:bg-[#c40812] transition border border-[#E50914]"
                         >

@@ -62,10 +62,10 @@ export default function MailCards({ isDark, emails = [], setSelectedEmail, isTra
             </div>
           </div>
           <div className="flex sm:ml-auto flex-row sm:flex-col gap-2 sm:min-w-[140px] items-center sm:items-end mt-2 sm:mt-0">
-            <div className="flex flex-col justify-between items-end gap-2">
+            <div className="flex flex-row flex-wrap items-center justify-end gap-2">
               {/* Action buttons */}
               {!isTrashMode && (
-                <div className="flex gap-2 mb-2">
+                <div className="flex gap-2">
                   <button
                     onClick={(e) => handleStarClick(e, email)}
                     className={`p-2 rounded-full transition-colors ${

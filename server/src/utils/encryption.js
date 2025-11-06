@@ -36,4 +36,24 @@ export const decryptText = (cipherB64) => {
   return plaintext;
 };
 
+// Decrypt a binary buffer (ciphertext + authTag) with a provided IV (base64 or Buffer)
+export const decryptBuffer = (cipherWithTagBuf, ivB64OrBuf) => {
+  const key = getKey();
+  const iv = Buffer.isBuffer(ivB64OrBuf)
+    ? ivB64OrBuf
+    : Buffer.from(String(ivB64OrBuf || ''), 'base64');
+  if (iv.length !== 12) {
+    throw new Error('Invalid IV length for AES-256-GCM (expected 12 bytes)');
+  }
+  if (!Buffer.isBuffer(cipherWithTagBuf) || cipherWithTagBuf.length < 17) {
+    throw new Error('Invalid ciphertext buffer');
+  }
+  const authTag = cipherWithTagBuf.subarray(cipherWithTagBuf.length - 16);
+  const ciphertext = cipherWithTagBuf.subarray(0, cipherWithTagBuf.length - 16);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+  const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  return plaintext;
+};
+
 
