@@ -87,6 +87,7 @@ const sendEmail = asyncHandler(async (req, res) => {
       .digest("hex");
     return {
       fileName,
+      originalName: att.originalName, // Store original name for decrypted downloads
       fileSize,
       mimeType,
       cloudinaryUrl,
@@ -117,6 +118,45 @@ const sendEmail = asyncHandler(async (req, res) => {
     };
   }
 
+  // Find sender's encrypted key from the encryptedKeys array
+  const senderEncryptedKey = Array.isArray(encryptedKeys)
+    ? encryptedKeys.find((k) => {
+        const keyEmail = String(k.email || "").toLowerCase();
+        return (
+          keyEmail === String(fromUser.email || "").toLowerCase() ||
+          keyEmail === String(fromUser.platformMail || "").toLowerCase()
+        );
+      })
+    : null;
+
+  // Build encryptedKeys array for sender's sent folder
+  // Include sender's key if found, plus all recipient keys
+  const sentEmailEncryptedKeys = [];
+  if (senderEncryptedKey) {
+    sentEmailEncryptedKeys.push({
+      recipient: fromUser._id,
+      email: fromUser.platformMail || fromUser.email,
+      encryptedAESKey: senderEncryptedKey.encryptedAESKey,
+    });
+  }
+  // Also include recipient keys for reference
+  for (const key of encryptedKeys || []) {
+    if (key !== senderEncryptedKey) {
+      const recipientUser = recipientUsers.find(
+        (u) =>
+          String(u.email || "").toLowerCase() === String(key.email || "").toLowerCase() ||
+          String(u.platformMail || "").toLowerCase() === String(key.email || "").toLowerCase()
+      );
+      if (recipientUser) {
+        sentEmailEncryptedKeys.push({
+          recipient: recipientUser._id,
+          email: key.email,
+          encryptedAESKey: key.encryptedAESKey,
+        });
+      }
+    }
+  }
+
   // Persist email in sender's sent folder
   const emailDoc = await Email.create({
     messageId: crypto.randomUUID(),
@@ -130,7 +170,7 @@ const sendEmail = asyncHandler(async (req, res) => {
     encryption: {
       algorithm: "AES-256-GCM",
       keyExchange: "RSA-2048",
-      encryptedKeys: encryptedKeys || [],
+      encryptedKeys: sentEmailEncryptedKeys,
     },
     mailbox: "sent",
     status: "sent",
@@ -779,6 +819,7 @@ const saveDraft = asyncHandler(async (req, res) => {
       .digest("hex");
     return {
       fileName,
+      originalName: att.originalName, // Store original name for decrypted downloads
       fileSize,
       mimeType,
       cloudinaryUrl,
@@ -852,19 +893,71 @@ const getAttachmentsMeta = asyncHandler(async (req, res) => {
     : null;
   if (!att) return res.status(404).json({ message: "Attachment not found" });
 
-  // Find recipient’s encrypted AES key
-  const keyRecord = (email.encryption?.encryptedKeys || []).find(
-    (k) => String(k.email).toLowerCase() === String(user.email).toLowerCase()
-  );
+  // Check if attachment is encrypted (has ivB64)
+  if (!att.ivB64) {
+    // Unencrypted attachment (e.g., images/videos uploaded as-is)
+    return res.json({
+      attachment: {
+        cloudinaryUrl: att.cloudinaryUrl,
+        ivB64: null,
+        mimeType: att.mimeType,
+        encryptedAESKey: null,
+        fileName: att.fileName,
+        originalName: att.originalName,
+        name: att.originalName || att.fileName,
+      },
+    });
+  }
+
+  // Find encrypted AES key - check both email and platformMail, and if user is sender
+  const isSender = String(email.from) === String(user._id);
+  const userEmails = [
+    user.email?.toLowerCase(),
+    user.platformMail?.toLowerCase(),
+  ].filter(Boolean);
+
+  // First, try to find by email match
+  let keyRecord = (email.encryption?.encryptedKeys || []).find((k) => {
+    const keyEmail = String(k.email || "").toLowerCase();
+    return userEmails.includes(keyEmail);
+  });
+
+  // If not found and user is sender, try to find by recipient field
+  if (!keyRecord && isSender) {
+    keyRecord = (email.encryption?.encryptedKeys || []).find((k) => {
+      return String(k.recipient || "") === String(user._id);
+    });
+  }
+
+  let encryptedAESKey = keyRecord?.encryptedAESKey || null;
+  
+  // Debug logging
+  if (!encryptedAESKey) {
+    console.warn(`No encrypted key found for user ${user.email} (${user.platformMail}) in email ${id}`, {
+      isSender,
+      userEmails,
+      availableKeys: (email.encryption?.encryptedKeys || []).map(k => ({
+        email: k.email,
+        recipient: k.recipient
+      }))
+    });
+  }
+
+  if (!encryptedAESKey) {
+    return res.status(404).json({ 
+      message: "Encrypted AES key not found for this user. You may not have access to decrypt this attachment." 
+    });
+  }
 
   return res.json({
     attachment: {
       cloudinaryUrl: att.cloudinaryUrl,
       ivB64: att.ivB64,
       mimeType: att.mimeType,
-      encryptedAESKey: keyRecord?.encryptedAESKey || null,
+      encryptedAESKey: encryptedAESKey,
       fileName: att.fileName,
       originalName: att.originalName,
+      name: att.originalName || att.fileName,
     },
   });
 });

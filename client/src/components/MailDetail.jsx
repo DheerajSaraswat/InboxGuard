@@ -73,23 +73,91 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
       const metaRes = await fetch(endpoint, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!metaRes.ok) throw new Error("Failed to get attachment metadata");
+      
+      if (!metaRes.ok) {
+        const errorData = await metaRes.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to get attachment metadata");
+      }
+      
       const { attachment } = await metaRes.json();
+      console.log("Attachment metadata:", attachment);
+      console.log("User info:", { firebaseUid: user.firebaseUid, email: user.email, platformMail: user.platformMail });
+      
+      // Check if attachment is unencrypted (e.g., images/videos)
+      if (!attachment.ivB64 && !attachment.encryptedAESKey) {
+        // Direct download for unencrypted attachments
+        const encRes = await fetch(attachment.cloudinaryUrl);
+        if (!encRes.ok) throw new Error("Failed to fetch file");
+        const blob = await encRes.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = attachment.name || attachment.fileName || name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+        return;
+      }
+
+      if (!attachment?.ivB64) {
+        throw new Error("Missing IV for encrypted attachment");
+      }
 
       if (!attachment?.encryptedAESKey) {
-        throw new Error("Missing encrypted AES key for this attachment");
+        throw new Error("Missing encrypted AES key for this attachment. You may not have access to decrypt this file.");
+      }
+
+      const ivBuffer = base64ToArrayBuffer(attachment.ivB64);
+      const iv = new Uint8Array(ivBuffer);
+      
+      if (iv.length !== 12) {
+        throw new Error(`Invalid IV length: ${iv.length} (expected 12 bytes for AES-GCM)`);
       }
 
       // 2️⃣ Get local private key (cached or from IndexedDB)
       const privateKey = await getLocalPrivateKey(user.firebaseUid);
+      
+      // Verify private key is valid (try to get key info, but don't require export)
+      try {
+        // Just verify the key exists and has the right algorithm
+        // Note: Private keys might not be extractable, which is fine
+        const keyUsages = privateKey.usages;
+        console.log("Private key usages:", keyUsages);
+        if (!keyUsages.includes("decrypt")) {
+          throw new Error("Private key does not support decryption");
+        }
+      } catch (err) {
+        console.error("Private key validation error:", err);
+        throw new Error("Private key is not accessible or invalid.");
+      }
 
       // 3️⃣ Decrypt AES key
       const encryptedKeyBuf = base64ToArrayBuffer(attachment.encryptedAESKey);
-      const aesKeyRaw = await window.crypto.subtle.decrypt(
-        { name: "RSA-OAEP" },
-        privateKey,
-        encryptedKeyBuf
-      );
+      console.log("Encrypted key buffer length:", encryptedKeyBuf.byteLength);
+      console.log("Expected RSA-OAEP encrypted key length should be 256 bytes (2048-bit key)");
+      
+      let aesKeyRaw;
+      try {
+        aesKeyRaw = await window.crypto.subtle.decrypt(
+          { name: "RSA-OAEP", hash: "SHA-256" },
+          privateKey,
+          encryptedKeyBuf
+        );
+        console.log("AES key decrypted successfully, length:", aesKeyRaw.byteLength);
+      } catch (err) {
+        console.error("RSA decryption error details:", {
+          name: err.name,
+          message: err.message,
+          encryptedKeyLength: encryptedKeyBuf.byteLength,
+          error: err
+        });
+        
+        // More specific error message
+        if (err.name === "OperationError") {
+          throw new Error(`Failed to decrypt AES key: The encrypted key doesn't match your private key. This could happen if: 1) Your key pair was regenerated after this email was sent, 2) The email was encrypted with a different public key, or 3) The encrypted key is corrupted. Original error: ${err.message}`);
+        }
+        throw new Error(`Failed to decrypt AES key: ${err.message}. This might indicate the encrypted key is not for your account, or your private key doesn't match the public key used to encrypt it.`);
+      }
 
       // 4️⃣ Import AES key
       const aesKey = await window.crypto.subtle.importKey(
@@ -106,25 +174,40 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
       const cipherBuf = await encRes.arrayBuffer();
 
       // 6️⃣ Decrypt file
-      const iv = base64ToArrayBuffer(attachment.ivB64);
-      const plainBuf = await window.crypto.subtle.decrypt(
-        { name: "AES-GCM", iv },
-        aesKey,
-        cipherBuf
-      );
+      let plainBuf;
+      try {
+        plainBuf = await window.crypto.subtle.decrypt(
+          { name: "AES-GCM", iv },
+          aesKey,
+          cipherBuf
+        );
+      } catch (err) {
+        throw new Error(`Decryption failed: ${err.message}. This could indicate the file is corrupted, the key is incorrect, or the authentication tag verification failed.`);
+      }
 
       // 7️⃣ Trigger download
-      const blob = new Blob([plainBuf], { type: attachment.mimeType });
+      const blob = new Blob([plainBuf], { type: attachment.mimeType || "application/octet-stream" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = attachment.name;
+      
+      // Use original name if available, otherwise strip .enc from fileName, fallback to provided name
+      let downloadName = attachment.originalName || attachment.name;
+      if (!downloadName && attachment.fileName) {
+        // Remove .enc extension if present
+        downloadName = attachment.fileName.replace(/\.enc$/i, '');
+      }
+      if (!downloadName) {
+        downloadName = name;
+      }
+      
+      a.download = downloadName;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(a.href);
     } catch (err) {
       console.error("Decryption failed:", err);
-      alert("Failed to decrypt or download the file.");
+      alert(err.message || "Failed to decrypt or download the file.");
     }
   }
 

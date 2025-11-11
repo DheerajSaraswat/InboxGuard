@@ -24,6 +24,7 @@ const EmailSchema = new Schema({
   attachments: [
     {
       fileName: String,
+      originalName: String, // Original filename before encryption (for decrypted downloads)
       fileSize: Number,
       mimeType: String,
       cloudinaryUrl: String,

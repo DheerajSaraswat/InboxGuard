@@ -58,10 +58,11 @@ async function uploadToCloudinary({ blob, fileName }) {
 async function getCurrentUserPublicKeyB64() {
   const response = await api.get("/users/crypto/public-key");
   const publicKeyB64 = response.data.data.publicKey;
+  const userEmail = response.data.data.email || response.data.data.platformMail;
   if (!publicKeyB64) {
     throw new Error("Missing user public key from server");
   }
-  return publicKeyB64;
+  return { publicKeyB64, userEmail };
 }
 
 async function lookupRecipientPublicKeys(emails) {
@@ -113,11 +114,18 @@ export async function encryptEmailAndAttachments({ subject, htmlBody, attachment
   }
 
   // 4) Encrypt AES key for sender and each recipient who has a public key
-  const userPublicKeyB64 = await getCurrentUserPublicKeyB64();
+  const { publicKeyB64: userPublicKeyB64, userEmail: senderEmail } = await getCurrentUserPublicKeyB64();
   const encryptedAesKeyForSender = await encryptAESForRecipient(aesRaw, userPublicKeyB64);
 
   const recipientKeyInfos = await lookupRecipientPublicKeys(recipients);
   const encryptedKeys = [];
+  
+  // Include sender's encrypted key so they can decrypt their own attachments
+  if (senderEmail) {
+    encryptedKeys.push({ email: senderEmail, encryptedAESKey: encryptedAesKeyForSender });
+  }
+  
+  // Add recipient keys
   for (const info of recipientKeyInfos) {
     if (info.publicKey) {
       const wrapped = await encryptAESForRecipient(aesRaw, info.publicKey);

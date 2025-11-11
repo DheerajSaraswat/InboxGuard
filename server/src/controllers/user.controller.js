@@ -140,7 +140,11 @@ const getPublicKey = asyncHandler(async(req, res)=>{
   if(!publicKey){
     throw new ApiError(404, "Public key not found. Please generate one first.")
   }
-  res.status(200).json(new ApiResponse(200, {publicKey}, "Public key fetched successfully."))
+  res.status(200).json(new ApiResponse(200, {
+    publicKey,
+    email: user.email,
+    platformMail: user.platformMail
+  }, "Public key fetched successfully."))
 })
 
 // Get user profile
