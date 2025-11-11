@@ -57,22 +57,58 @@ function Navbar({ isMenuOpen, setIsMenuOpen, isDark: isDarkProp }) {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className={`md:hidden ${isDark ? 'bg-[#0A0A0A] border-t border-[#2E2E2E]' : 'bg-white border-t border-[#bbb]'}`}>
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            <a href="#features" className={`block px-3 py-2 ${isDark ? 'text-[#BBBBBB] hover:text-white' : 'text-[#444] hover:text-[#E50914]'}`}>Features</a>
-            <a href="#how-it-works" className={`block px-3 py-2 ${isDark ? 'text-[#BBBBBB] hover:text-white' : 'text-[#444] hover:text-[#E50914]'}`}>How It Works</a>
-            <a href="#applications" className={`block px-3 py-2 ${isDark ? 'text-[#BBBBBB] hover:text-white' : 'text-[#444] hover:text-[#E50914]'}`}>Applications</a>
-            <button
-              className="w-full mt-2 bg-transparent p-2 rounded-full hover:bg-[#232326] transition-all flex items-center justify-center"
-              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              onClick={() => dispatch(toggleTheme())}
-            >
-              {isDark ? <Sun className="w-6 h-6 text-yellow-400" /> : <Moon className="w-6 h-6 text-[#111]" />}
-              <span className={`ml-2 ${isDark ? 'text-white' : 'text-[#111]'}`}>{isDark ? 'Light' : 'Dark'} Mode</span>
-            </button>
-            <button className="w-full mt-2 bg-[#E50914] hover:bg-red-700 text-white px-4 py-2 rounded-lg">Get Started</button>
+        <>
+          {/* Overlay */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+            onClick={() => setIsMenuOpen(false)}
+          />
+          <div className={`md:hidden fixed top-16 left-0 right-0 z-50 ${isDark ? 'bg-[#0A0A0A] border-t border-[#2E2E2E]' : 'bg-white border-t border-[#bbb]'} shadow-lg`}>
+            <div className="px-2 pt-2 pb-3 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
+              <a 
+                href="#features" 
+                className={`block px-3 py-2 rounded-lg ${isDark ? 'text-[#BBBBBB] hover:text-white hover:bg-[#232326]' : 'text-[#444] hover:text-[#E50914] hover:bg-gray-50'} transition-colors`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Features
+              </a>
+              <a 
+                href="#how-it-works" 
+                className={`block px-3 py-2 rounded-lg ${isDark ? 'text-[#BBBBBB] hover:text-white hover:bg-[#232326]' : 'text-[#444] hover:text-[#E50914] hover:bg-gray-50'} transition-colors`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                How It Works
+              </a>
+              <a 
+                href="#applications" 
+                className={`block px-3 py-2 rounded-lg ${isDark ? 'text-[#BBBBBB] hover:text-white hover:bg-[#232326]' : 'text-[#444] hover:text-[#E50914] hover:bg-gray-50'} transition-colors`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Applications
+              </a>
+              <button
+                className={`w-full mt-2 bg-transparent p-2 rounded-lg transition-all flex items-center justify-center ${isDark ? 'hover:bg-[#232326]' : 'hover:bg-gray-50'}`}
+                title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                onClick={() => {
+                  dispatch(toggleTheme());
+                  setIsMenuOpen(false);
+                }}
+              >
+                {isDark ? <Sun className="w-6 h-6 text-yellow-400" /> : <Moon className="w-6 h-6 text-[#111]" />}
+                <span className={`ml-2 ${isDark ? 'text-white' : 'text-[#111]'}`}>{isDark ? 'Light' : 'Dark'} Mode</span>
+              </button>
+              <button 
+                className="w-full mt-2 bg-[#E50914] hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all font-medium"
+                onClick={() => {
+                  Navigate('/signin');
+                  setIsMenuOpen(false);
+                }}
+              >
+                Get Started
+              </button>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </nav>
   );

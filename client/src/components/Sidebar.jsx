@@ -139,30 +139,45 @@ export default function Sidebar({ isDark }) {
     <>
       {/* Mobile menu button */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 bg-[#E50914] text-white p-2 rounded-lg shadow-lg"
+        className="md:hidden fixed top-4 left-4 z-50 bg-[#E50914] text-white p-2.5 rounded-lg shadow-lg hover:bg-red-700 transition-colors active:scale-95"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Open sidebar"
+        aria-label={open ? "Close sidebar" : "Open sidebar"}
       >
-        <svg
-          width="24"
-          height="24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
+        {open ? (
+          <svg
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        ) : (
+          <svg
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        )}
       </button>
       {/* Sidebar */}
       <div
         className={`
     fixed md:relative top-0 left-0 z-40
-    h-full w-64 min-h-screen flex-shrink-0
-    transition-transform duration-300
+    h-full w-64 sm:w-72 min-h-screen flex-shrink-0
+    transition-transform duration-300 ease-in-out
     ${open ? "translate-x-0" : "-translate-x-full"}
     md:translate-x-0
     ${

@@ -84,19 +84,80 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
       console.log("User info:", { firebaseUid: user.firebaseUid, email: user.email, platformMail: user.platformMail });
       
       // Check if attachment is unencrypted (e.g., images/videos)
-      if (!attachment.ivB64 && !attachment.encryptedAESKey) {
-        // Direct download for unencrypted attachments
-        const encRes = await fetch(attachment.cloudinaryUrl);
-        if (!encRes.ok) throw new Error("Failed to fetch file");
-        const blob = await encRes.blob();
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = attachment.name || attachment.fileName || name;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(a.href);
-        return;
+      // Images/videos are uploaded unencrypted, so they won't have ivB64 or encryptedAESKey
+      const isUnencrypted = (!attachment.ivB64 || attachment.ivB64 === null || attachment.ivB64 === '') && 
+                            (!attachment.encryptedAESKey || attachment.encryptedAESKey === null || attachment.encryptedAESKey === '');
+      
+      if (isUnencrypted) {
+        // Direct download for unencrypted attachments (images/videos)
+        try {
+          // Get the correct URL (cloudinaryUrl or url)
+          const imageUrl = attachment.cloudinaryUrl || attachment.url;
+          if (!imageUrl) {
+            throw new Error("No URL found for attachment");
+          }
+          
+          console.log("Downloading unencrypted attachment from:", imageUrl);
+          
+          // Fetch with CORS mode for cross-origin resources
+          const encRes = await fetch(imageUrl, {
+            mode: 'cors',
+            credentials: 'omit'
+          });
+          
+          if (!encRes.ok) {
+            throw new Error(`Failed to fetch file: ${encRes.status} ${encRes.statusText}`);
+          }
+          
+          const blob = await encRes.blob();
+          console.log("Blob created:", { type: blob.type, size: blob.size });
+          
+          // Create download link
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          
+          // Use original name if available, otherwise use fileName or provided name
+          let downloadName = attachment.originalName || attachment.name;
+          if (!downloadName && attachment.fileName) {
+            downloadName = attachment.fileName;
+          }
+          if (!downloadName) {
+            downloadName = name;
+          }
+          
+          // Ensure the filename has the correct extension
+          const mimeType = attachment.mimeType || blob.type;
+          if (mimeType && downloadName && !downloadName.includes('.')) {
+            const ext = mimeType.split('/')[1];
+            if (ext) downloadName += `.${ext}`;
+          }
+          
+          a.download = downloadName;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          
+          // Clean up after a short delay
+          setTimeout(() => {
+            if (document.body.contains(a)) {
+              document.body.removeChild(a);
+            }
+            URL.revokeObjectURL(a.href);
+          }, 100);
+          
+          console.log("Download initiated for:", downloadName);
+          return;
+        } catch (err) {
+          console.error("Direct download failed:", err);
+          // Fallback: try to open in new tab if download fails
+          const imageUrl = attachment.cloudinaryUrl || attachment.url;
+          if (imageUrl) {
+            window.open(imageUrl, '_blank');
+          } else {
+            alert(`Failed to download image: ${err.message}`);
+          }
+          return;
+        }
       }
 
       if (!attachment?.ivB64) {
@@ -216,13 +277,13 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
     <div
       className={`flex-1 flex flex-col min-h-0 overflow-hidden ${
         isDark ? "bg-[#18181b]" : "bg-white"
-      } border-l border-gray-200`}
+      } border-l border-gray-200 w-full`}
     >
       {/* Header */}
       <div
         className={`border-b ${
           isDark ? "border-[#2E2E2E]" : "border-gray-200"
-        } p-4`}
+        } p-3 sm:p-4`}
       >
           {(() => {
             const level = String(email?.securityAnalysis?.riskLevel || '').toLowerCase();
@@ -236,66 +297,74 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
               </div>
             );
           })()}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={handleReply}
-                className={`p-2 rounded-md transition ${
+                className={`p-1.5 sm:p-2 rounded-md transition active:scale-95 ${
                   isDark ? "hover:bg-[#232326]" : "hover:bg-gray-100"
                 }`}
                 title="Reply"
+                aria-label="Reply"
               >
-                <Reply className={`w-4 h-4 ${isDark ? "text-[#f3f4f6]" : "text-[#111]"}`} />
+                <Reply className={`w-4 h-4 sm:w-5 sm:h-5 ${isDark ? "text-[#f3f4f6]" : "text-[#111]"}`} />
               </button>
               <button
                 onClick={handleForward}
-                className={`p-2 rounded-md transition ${
+                className={`p-1.5 sm:p-2 rounded-md transition active:scale-95 ${
                   isDark ? "hover:bg-[#232326]" : "hover:bg-gray-100"
                 }`}
                 title="Forward"
+                aria-label="Forward"
               >
-                <Forward className={`w-4 h-4 ${isDark ? "text-[#f3f4f6]" : "text-[#111]"}`} />
+                <Forward className={`w-4 h-4 sm:w-5 sm:h-5 ${isDark ? "text-[#f3f4f6]" : "text-[#111]"}`} />
               </button>
               <button
-                className={`p-2 rounded-md transition ${
+                className={`p-1.5 sm:p-2 rounded-md transition active:scale-95 ${
                   isDark ? "hover:bg-[#232326]" : "hover:bg-gray-100"
                 }`}
+                title="Star"
+                aria-label="Star"
               >
                 <Star
                   className={
                     email.isStarred
-                      ? "w-4 h-4 fill-yellow-400 text-yellow-400"
-                      : `w-4 h-4 ${isDark ? "text-[#f3f4f6]" : "text-[#111]"}`
+                      ? "w-4 h-4 sm:w-5 sm:h-5 fill-yellow-400 text-yellow-400"
+                      : `w-4 h-4 sm:w-5 sm:h-5 ${isDark ? "text-[#f3f4f6]" : "text-[#111]"}`
                   }
                 />
               </button>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={isBusy ? undefined : onDelete}
                 disabled={isBusy}
-                className={`p-2 rounded-md transition ${
+                className={`p-1.5 sm:p-2 rounded-md transition active:scale-95 ${
                   isDark
                     ? "hover:bg-red-900/20 text-red-400"
                     : "hover:bg-red-50 text-red-600"
                 } ${isBusy ? "opacity-60 cursor-not-allowed" : ""}`}
+                title="Delete"
+                aria-label="Delete"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
                 onClick={onBack}
-                className={`p-1.5 rounded-md transition ${
+                className={`p-1.5 sm:p-2 rounded-md transition active:scale-95 ${
                   isDark ? "hover:bg-[#232326]" : "hover:bg-gray-100"
                 }`}
+                title="Back"
+                aria-label="Back"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>
 
         {/* Subject */}
         <h1
-          className={`text-xl font-semibold mb-3 ${
+          className={`text-lg sm:text-xl font-semibold mb-3 break-words ${
             isDark ? "text-[#f3f4f6]" : "text-[#111]"
           }`}
         >
@@ -329,7 +398,7 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6">
         <div
           className={`prose prose-sm max-w-none leading-relaxed text-sm break-words overflow-wrap-anywhere ${
             isDark ? "text-[#f3f4f6]" : "text-[#111]"
@@ -345,7 +414,7 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
         {/* Attachments */}
         {Array.isArray(email.attachments) && email.attachments.length > 0 && (
           <div
-            className={`mt-6 border-t pt-4 ${
+            className={`mt-4 sm:mt-6 border-t pt-3 sm:pt-4 ${
               isDark ? "border-[#2E2E2E]" : "border-gray-200"
             }`}
           >
@@ -356,7 +425,7 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
             >
               Attachments ({email.attachments.length})
             </div>
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 gap-2 sm:gap-3">
                 {email.attachments.map((att, idx) => {
                   const url = att.cloudinaryUrl || att.url;
                   const type = String(att.mimeType || '').toLowerCase();
@@ -366,74 +435,78 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
                   return (
                     <div
                       key={idx}
-                      className={`border rounded-lg p-3 flex items-center gap-3 ${
+                      className={`border rounded-lg p-2 sm:p-3 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 ${
                         isDark
                           ? "border-[#2E2E2E] bg-[#232326]"
                           : "border-gray-200 bg-gray-50"
                       }`}
                     >
-                      {isImage ? (
-                        <button
-                          onClick={() => setPreviewAttachment({ ...att, url })}
-                          className="shrink-0"
-                        >
-                          <img
-                            src={url}
-                            alt={name}
-                            className="w-16 h-16 object-cover rounded"
-                            crossOrigin="anonymous"
-                          />
-                        </button>
-                      ) : isVideo ? (
-                        <button
-                          onClick={() => setPreviewAttachment({ ...att, url })}
-                          className="shrink-0"
-                        >
-                          <video
-                            className="w-24 h-16 rounded"
-                            src={url}
-                            crossOrigin="anonymous"
-                          />
-                        </button>
-                      ) : (
-                        <div
-                          className={`w-10 h-10 rounded flex items-center justify-center text-xs font-semibold ${
-                            isDark
-                              ? "bg-[#232326] text-[#f3f4f6]"
-                              : "bg-gray-200 text-[#111]"
-                          }`}
-                        >
-                          FILE
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div
-                          className={`text-sm font-medium truncate ${
-                            isDark ? "text-[#f3f4f6]" : "text-[#111]"
-                          }`}
-                        >
-                          {name}
-                        </div>
-                        {att.fileSize || att.originalSize ? (
+                      <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                        {isImage ? (
+                          <button
+                            onClick={() => setPreviewAttachment({ ...att, url })}
+                            className="shrink-0"
+                            aria-label="Preview image"
+                          >
+                            <img
+                              src={url}
+                              alt={name}
+                              className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded"
+                              crossOrigin="anonymous"
+                            />
+                          </button>
+                        ) : isVideo ? (
+                          <button
+                            onClick={() => setPreviewAttachment({ ...att, url })}
+                            className="shrink-0"
+                            aria-label="Preview video"
+                          >
+                            <video
+                              className="w-16 h-12 sm:w-24 sm:h-16 rounded"
+                              src={url}
+                              crossOrigin="anonymous"
+                            />
+                          </button>
+                        ) : (
                           <div
-                            className={`text-xs ${
-                              isDark ? "text-gray-400" : "text-gray-500"
+                            className={`w-10 h-10 sm:w-12 sm:h-12 rounded flex items-center justify-center text-xs font-semibold ${
+                              isDark
+                                ? "bg-[#232326] text-[#f3f4f6]"
+                                : "bg-gray-200 text-[#111]"
                             }`}
                           >
-                            {Math.round(
-                              (att.fileSize || att.originalSize) / 1024 || 0
-                            )}{" "}
-                            KB
+                            FILE
                           </div>
-                        ) : null}
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div
+                            className={`text-sm font-medium break-words ${
+                              isDark ? "text-[#f3f4f6]" : "text-[#111]"
+                            }`}
+                          >
+                            {name}
+                          </div>
+                          {att.fileSize || att.originalSize ? (
+                            <div
+                              className={`text-xs ${
+                                isDark ? "text-gray-400" : "text-gray-500"
+                              }`}
+                            >
+                              {Math.round(
+                                (att.fileSize || att.originalSize) / 1024 || 0
+                              )}{" "}
+                              KB
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
                         {(isImage || isVideo) && (
                           <button
                             onClick={() =>
                               setPreviewAttachment({ ...att, url })
                             }
-                            className={`text-xs px-3 py-1.5 rounded transition ${
+                            className={`text-xs px-3 py-1.5 rounded transition active:scale-95 ${
                               isDark
                                 ? "bg-[#18181b] hover:bg-[#232326] text-[#f3f4f6] border-[#2E2E2E]"
                                 : "bg-gray-100 hover:bg-gray-200 text-[#111] border-gray-300"
@@ -446,7 +519,7 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
                           onClick={() =>
                             handleDownloadAttachment(email._id, idx, name)
                           }
-                          className="text-xs px-3 py-1.5 rounded bg-[#E50914] text-white hover:bg-[#c40812] transition border border-[#E50914]"
+                          className="text-xs px-3 py-1.5 rounded bg-[#E50914] text-white hover:bg-[#c40812] transition border border-[#E50914] active:scale-95"
                         >
                           Download
                         </button>

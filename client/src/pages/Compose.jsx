@@ -24,6 +24,7 @@ import {
   Plus,
   Send,
   Menu,
+  ArrowLeft,
   Quote as QuoteIcon,
   Shield,
 } from "lucide-react";
@@ -705,12 +706,20 @@ const EmailEditor = ({ isDark }) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`p-2 rounded-lg transition-colors ${
+              onClick={() => {
+                // On mobile, navigate back; on desktop could show menu
+                if (window.innerWidth < 1024) {
+                  window.history.back();
+                } else {
+                  setIsMobileMenuOpen(!isMobileMenuOpen);
+                }
+              }}
+              className={`p-2 rounded-lg transition-colors active:scale-95 ${
                 isDark ? "hover:bg-[#303134]" : "hover:bg-gray-100"
               }`}
+              aria-label="Back"
             >
-              <Menu
+              <ArrowLeft
                 size={20}
                 className={isDark ? "text-[#e8eaed]" : "text-gray-600"}
               />
@@ -1124,28 +1133,35 @@ const EmailEditor = ({ isDark }) => {
           </div>
         </div>
 
-        {/* AI Assistant Panel (unchanged) */}
+        {/* AI Assistant Panel - Mobile: Full screen overlay, Desktop: Side panel */}
         {showAssistant && (
-          <div className="w-full lg:w-96 bg-white border-l border-gray-200 flex flex-col shadow-xl lg:shadow-none flex-shrink-0">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md">
-                  <Bot size={16} className="text-white" />
+          <>
+            {/* Mobile Overlay */}
+            <div 
+              className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50"
+              onClick={() => setShowAssistant(false)}
+            />
+            <div className={`fixed lg:relative lg:z-auto inset-0 lg:inset-auto top-0 left-0 right-0 bottom-0 lg:top-auto lg:left-auto lg:right-auto lg:bottom-auto w-full lg:w-96 ${isDark ? 'bg-[#18181b]' : 'bg-white'} border-l border-gray-200 flex flex-col shadow-xl lg:shadow-none flex-shrink-0 z-50 lg:z-auto`}>
+              <div className={`p-4 border-b ${isDark ? 'border-[#2E2E2E]' : 'border-gray-200'} flex items-center justify-between flex-shrink-0`}>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md">
+                    <Bot size={16} className="text-white" />
+                  </div>
+                  <span className={`font-bold ${isDark ? 'text-[#f3f4f6]' : 'text-gray-800'}`}>
+                    AI Writing Assistant
+                  </span>
                 </div>
-                <span className="font-bold text-gray-800">
-                  AI Writing Assistant
-                </span>
+                <button
+                  onClick={() => setShowAssistant(false)}
+                  className={`${isDark ? 'text-[#9aa0a6] hover:text-[#f3f4f6] hover:bg-[#232326]' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'} p-1 rounded-full transition-colors`}
+                  aria-label="Close assistant"
+                >
+                  <X size={20} />
+                </button>
               </div>
-              <button
-                onClick={() => setShowAssistant(false)}
-                className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
 
-            <div className="p-4 border-b border-gray-100 flex-shrink-0">
-              <h3 className="text-sm font-bold text-gray-700 mb-3">
+            <div className={`p-4 border-b ${isDark ? 'border-[#2E2E2E]' : 'border-gray-100'} flex-shrink-0`}>
+              <h3 className={`text-sm font-bold mb-3 ${isDark ? 'text-[#f3f4f6]' : 'text-gray-700'}`}>
                 Quick Actions
               </h3>
               <div className="grid grid-cols-2 gap-2">
@@ -1153,7 +1169,7 @@ const EmailEditor = ({ isDark }) => {
                   <button
                     key={action}
                     onClick={() => handleQuickAction(action)}
-                    className="flex items-center space-x-2 px-3 py-2 bg-gray-50 hover:bg-blue-100/50 border border-gray-200 rounded-xl transition-colors text-left text-sm font-medium text-gray-700 shadow-sm"
+                    className={`flex items-center space-x-2 px-3 py-2 ${isDark ? 'bg-[#232326] hover:bg-[#2E2E2E] border-[#2E2E2E] text-[#f3f4f6]' : 'bg-gray-50 hover:bg-blue-100/50 border-gray-200 text-gray-700'} border rounded-xl transition-colors text-left text-sm font-medium shadow-sm active:scale-95`}
                   >
                     {action === "improve" && (
                       <Edit3 size={16} className="text-blue-500" />
@@ -1173,27 +1189,33 @@ const EmailEditor = ({ isDark }) => {
               </div>
             </div>
 
-            <div className="p-4 flex-1 overflow-y-auto space-y-4">
+            <div className={`p-4 flex-1 overflow-y-auto space-y-4 ${isDark ? 'bg-[#18181b]' : ''}`}>
               {assistantMessages.map((message) => (
                 <div
                   key={message.id}
                   className={`max-w-[85%] ${
                     message.isAssistant
-                      ? "bg-gray-100 rounded-bl-xl rounded-tr-xl rounded-br-xl self-start"
+                      ? isDark 
+                        ? "bg-[#232326] rounded-bl-xl rounded-tr-xl rounded-br-xl self-start"
+                        : "bg-gray-100 rounded-bl-xl rounded-tr-xl rounded-br-xl self-start"
                       : "bg-blue-500 text-white rounded-tl-xl rounded-tr-xl rounded-bl-xl ml-auto"
                   } rounded-xl p-3 shadow-sm`}
                   style={{ wordBreak: "break-word" }}
                 >
                   <p
                     className={`text-sm ${
-                      message.isAssistant ? "text-gray-800" : "text-white"
+                      message.isAssistant 
+                        ? isDark ? "text-[#f3f4f6]" : "text-gray-800"
+                        : "text-white"
                     } whitespace-pre-wrap`}
                   >
                     {message.text}
                   </p>
                   <span
                     className={`text-xs mt-1 block ${
-                      message.isAssistant ? "text-gray-500" : "text-blue-200"
+                      message.isAssistant 
+                        ? isDark ? "text-[#9aa0a6]" : "text-gray-500"
+                        : "text-blue-200"
                     } text-right`}
                   >
                     {message.time}
@@ -1202,16 +1224,16 @@ const EmailEditor = ({ isDark }) => {
               ))}
 
               {isAssistantTyping && (
-                <div className="max-w-[85%] bg-gray-100 rounded-bl-xl rounded-tr-xl rounded-br-xl p-3 shadow-sm flex items-center space-x-2">
+                <div className={`max-w-[85%] ${isDark ? 'bg-[#232326]' : 'bg-gray-100'} rounded-bl-xl rounded-tr-xl rounded-br-xl p-3 shadow-sm flex items-center space-x-2`}>
                   <Bot size={16} className="text-blue-500 animate-pulse" />
-                  <span className="text-sm text-gray-600">
+                  <span className={`text-sm ${isDark ? 'text-[#9aa0a6]' : 'text-gray-600'}`}>
                     Assistant is typing...
                   </span>
                 </div>
               )}
             </div>
 
-            <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
+            <div className={`p-4 border-t ${isDark ? 'border-[#2E2E2E] bg-[#18181b]' : 'border-gray-200 bg-white'} flex-shrink-0`}>
               <div className="flex space-x-2">
                 <input
                   type="text"
@@ -1221,13 +1243,13 @@ const EmailEditor = ({ isDark }) => {
                     e.key === "Enter" && sendAssistantMessage()
                   }
                   placeholder="Ask for help with your email..."
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-500 text-sm text-gray-700 transition-all"
+                  className={`flex-1 px-4 py-3 border-2 ${isDark ? 'border-[#2E2E2E] bg-[#232326] text-[#f3f4f6] placeholder-[#9aa0a6] focus:border-blue-500 focus:ring-blue-500/20' : 'border-gray-200 text-gray-700 focus:ring-blue-50 focus:border-blue-500'} rounded-xl focus:outline-none focus:ring-4 text-sm transition-all`}
                   disabled={isAssistantTyping}
                 />
                 <button
                   onClick={sendAssistantMessage}
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-3 rounded-xl transition-all shadow-md flex items-center justify-center"
-                  disabled={isAssistantTyping}
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-3 rounded-xl transition-all shadow-md flex items-center justify-center disabled:opacity-50 active:scale-95"
+                  disabled={isAssistantTyping || !assistantInput.trim()}
                 >
                   <Send size={18} />
                 </button>
@@ -1278,6 +1300,7 @@ const EmailEditor = ({ isDark }) => {
               </div>
             </div>
           </div>
+          </>
         )}
 
         {!showAssistant && (

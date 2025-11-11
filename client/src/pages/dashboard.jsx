@@ -142,24 +142,25 @@ export default function Dashboard() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button
-              className={`bg-transparent p-2 rounded-full hover:${
-                isDark ? "bg-[#232326]" : "bg-[#f3f4f6]"
-              } ${isDark ? "text-yellow-400" : "text-[#111]"}`}
+              className={`bg-transparent p-2 rounded-full transition-colors active:scale-95 ${
+                isDark ? "hover:bg-[#232326] text-yellow-400" : "hover:bg-[#f3f4f6] text-[#111]"
+              }`}
               onClick={() => dispatch(toggleTheme())}
               title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
               {isDark ? (
-                <Sun className="w-6 h-6 text-yellow-400" />
+                <Sun className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
               ) : (
-                <Moon className="w-6 h-6 text-[#111]" />
+                <Moon className="w-5 h-5 sm:w-6 sm:h-6 text-[#111]" />
               )}
             </button>
             <div
-              className={`relative flex items-center gap-1 px-3 py-2 rounded-lg ${
-                isDark ? "text-[#f3f4f6] bg-[#232326]" : "text-[#111]"
-              } cursor-pointer`}
+              className={`relative flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors ${
+                isDark ? "text-[#f3f4f6] bg-[#232326] hover:bg-[#2E2E2E]" : "text-[#111] hover:bg-gray-50"
+              } cursor-pointer active:scale-95`}
             >
               <div
                 className="flex items-center gap-1"
@@ -167,28 +168,35 @@ export default function Dashboard() {
               >
                 <img
                   src={user?.displayImage}
-                  className={`w-8 h-8 ${
+                  className={`w-7 h-7 sm:w-8 sm:h-8 ${
                     isDark
                       ? "text-[#f3f4f6] bg-[#232326]"
                       : "text-[#111] bg-[#e5e7eb]"
-                  } rounded-full p-1`}
+                  } rounded-full p-0.5 sm:p-1`}
+                  alt="User avatar"
                 />
                 <ChevronDown
-                  className={`w-4 h-4 stroke-[3] ${
+                  className={`w-3 h-3 sm:w-4 sm:h-4 stroke-[3] hidden sm:block ${
                     isDark ? "text-[#f3f4f6]" : "text-[#111]"
                   }`}
                 />
               </div>
 
               {showDropdown && (
-                <div
-                  className={`absolute right-0 top-full mt-2 w-56 ${
-                    isDark
-                      ? "bg-[#232326] border-[#232326]"
-                      : "bg-white border-[#e5e7eb]"
-                  } border rounded-2xl shadow-xl z-10 py-2 font-sans`}
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <>
+                  {/* Mobile overlay */}
+                  <div 
+                    className="fixed inset-0 z-[5] md:hidden"
+                    onClick={() => setShowDropdown(false)}
+                  />
+                  <div
+                    className={`absolute right-0 top-full mt-2 w-56 sm:w-64 ${
+                      isDark
+                        ? "bg-[#232326] border-[#232326]"
+                        : "bg-white border-[#e5e7eb]"
+                    } border rounded-2xl shadow-xl z-10 py-2 font-sans`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -231,6 +239,7 @@ export default function Dashboard() {
                     <span className="pl-2">Logout</span>
                   </button>
                 </div>
+                </>
               )}
             </div>
           </div>
@@ -244,12 +253,12 @@ export default function Dashboard() {
           } ${isDark ? "bg-[#18181b]" : "bg-white"} border-r border-gray-200`}
         >
           <div
-            className={`p-4 border-b ${
+            className={`p-3 sm:p-4 border-b ${
               isDark ? "bg-[#232326]" : "bg-white"
             } border-gray-200`}
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-4xl font-bold">Inbox</h2>
+              <h2 className={`${isDark ? 'text-[#f3f4f6]' : 'text-[#111]'} text-2xl sm:text-3xl lg:text-4xl font-bold`}>Inbox</h2>
             </div>
           </div>
           <div
