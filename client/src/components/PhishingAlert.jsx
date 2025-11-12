@@ -1,4 +1,4 @@
-import React from "react";
+import React,{useEffect} from "react";
 import { Shield, AlertTriangle, X } from "lucide-react";
 
 const PhishingAlert = ({ scanResult, onReview, onSendAnyway }) => {
