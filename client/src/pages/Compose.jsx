@@ -491,7 +491,6 @@ const EmailEditor = ({ isDark }) => {
 
       // Save to server
       const { saveDraft } = await import("../apiRequests/saveDraft");
-      console.log("hlo");
       await saveDraft(draft);
 
       // Also save to localStorage as backup

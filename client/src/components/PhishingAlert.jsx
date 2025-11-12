@@ -1,4 +1,4 @@
-import React,{useEffect} from "react";
+import React,{useEffect, useState} from "react";
 import { Shield, AlertTriangle, X } from "lucide-react";
 
 const PhishingAlert = ({ scanResult, onReview, onSendAnyway }) => {
@@ -6,12 +6,23 @@ const PhishingAlert = ({ scanResult, onReview, onSendAnyway }) => {
   const isHigh = level === "high" || level === "critical";
   const isMedium = level === "medium";
 
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     if (level === "low") {
       onSendAnyway();
     }
   }, [level, onSendAnyway]);
 
+  const handleClick = async () => {
+    setLoading(true);
+    try {
+      await onSendAnyway(); // wait for your async send function to finish
+    } finally {
+      setLoading(false); // stop loading regardless of success/failure
+    }
+  };
+  
   if (level === "low") return null;
 
   return (
@@ -103,14 +114,41 @@ const PhishingAlert = ({ scanResult, onReview, onSendAnyway }) => {
             Review Email
           </button>
           <button
-            onClick={onSendAnyway}
-            className={`px-5 py-2.5 rounded-lg font-medium transition-colors text-sm ${
+            onClick={handleClick}
+            disabled={loading}
+            className={`px-5 py-2.5 rounded-lg font-medium transition-colors text-sm flex items-center justify-center gap-2 ${
               isHigh
                 ? "bg-red-600 hover:bg-red-700 text-white"
                 : "bg-orange-500 hover:bg-orange-600 text-white"
-            }`}
+            } ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
           >
-            Send Anyway
+            {loading ? (
+              <>
+                <svg
+                  className="animate-spin h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  ></path>
+                </svg>
+                Sending...
+              </>
+            ) : (
+              "Send Anyway"
+            )}
           </button>
         </div>
 
