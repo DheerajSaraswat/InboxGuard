@@ -289,9 +289,8 @@ const EmailEditor = ({ isDark }) => {
 
     try {
       // Call ML model directly from frontend to save time
-      const mlApiUrl = import.meta.env.VITE_ML_API_URL || "https://inboxguard-production.up.railway.app";
+      const mlApiUrl = import.meta.env.VITE_ML_API_URL;
       const baseUrl = mlApiUrl.replace(/\/$/, "");
-      
       const response = await axios.post(
         `${baseUrl}/classify`,
         { email_text: text },
@@ -341,12 +340,14 @@ const EmailEditor = ({ isDark }) => {
           riskLevel: riskLevel,
         };
 
+        // Low risk - send without showing alert to sender
+        // Note: Low risk won't show warnings to receiver either (handled on server)
         if (phishingReport.riskLevel === "low") {
           await sendEmail(phishingReport);
           return;
         }
-
-        // Medium/High risk — show phishing alert
+        
+        // Medium/High risk — show phishing alert to sender
         setScanResult({
           riskLevel: phishingReport.riskLevel,
           indicators: phishingReport.analysis.detectedPatterns.map(
@@ -425,6 +426,26 @@ const EmailEditor = ({ isDark }) => {
         headers: { "Content-Type": "application/json" },
       });
       toast.success("Email sent");
+      
+      // Show warning if some recipients blocked the sender
+      if (
+        Array.isArray(data?.blockedRecipients) &&
+        data.blockedRecipients.length > 0
+      ) {
+        toast.warning((t) => (
+          <div>
+            <div className="font-semibold">Email blocked by some recipients:</div>
+            <div className="text-sm mt-1">
+              {data.blockedRecipients.join(", ")}
+            </div>
+            <div className="text-xs mt-1 text-gray-500">
+              Email was not delivered to these recipients.
+            </div>
+          </div>
+        ));
+      }
+      
+      // Show info if some recipients were not found
       if (
         Array.isArray(data?.missingRecipients) &&
         data.missingRecipients.length
@@ -437,6 +458,11 @@ const EmailEditor = ({ isDark }) => {
             </div>
           </div>
         ));
+      }
+      
+      // Show info if email was partially delivered
+      if (data?.blockedRecipients?.length > 0 && data?.deliveredTo > 0) {
+        toast.info(`Email delivered to ${data.deliveredTo} of ${data.totalRecipients} recipient(s)`);
       }
 
       // Clear the compose form after successful send

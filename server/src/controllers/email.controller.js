@@ -11,6 +11,7 @@ import {
   decryptBuffer,
   decryptAESKey,
 } from "../utils/encryption.js";
+import { extractUrls, analyzeUrls } from "../utils/linkAnalyzer.js";
 import { Readable } from "stream";
 import axios from "axios";
 
@@ -35,10 +36,10 @@ const sendEmail = asyncHandler(async (req, res) => {
   if (!fromUser) {
     return res.status(404).json({ message: "Sender not found" });
   }
-  // Resolve recipients by email string -> User
+  // Resolve recipients by email string -> User (include securitySettings for blocklist/whitelist check)
   const recipientUsers = await User.find({
     $or: [{ platformMail: { $in: to } }, { email: { $in: to } }],
-  });
+  }); // securitySettings should be included by default, but we'll access it directly
   const foundEmails = new Set(
     recipientUsers.map((u) => u.platformMail || u.email)
   );
@@ -49,7 +50,118 @@ const sendEmail = asyncHandler(async (req, res) => {
       .json({ message: "No valid recipients found", missing });
   }
 
-  const toArray = recipientUsers.map((u) => ({ user: u._id }));
+  // Helper function to check if sender is whitelisted by recipient
+  const isSenderWhitelisted = (recipient, sender) => {
+    if (!recipient.securitySettings?.whitelist || !Array.isArray(recipient.securitySettings.whitelist)) {
+      return false;
+    }
+
+    const whitelist = recipient.securitySettings.whitelist;
+    const senderEmail = sender.email?.toLowerCase();
+    const senderPlatformMail = sender.platformMail?.toLowerCase();
+    const senderDomain = senderEmail?.split('@')[1]?.toLowerCase();
+
+    for (const entry of whitelist) {
+      if (!entry || !entry.value) continue;
+      
+      const whitelistedValue = entry.value.toLowerCase().trim();
+      const entryType = entry.type?.toLowerCase();
+
+      // Check email match
+      if (entryType === 'email' || whitelistedValue.includes('@')) {
+        if (whitelistedValue === senderEmail || whitelistedValue === senderPlatformMail) {
+          return true;
+        }
+      }
+      
+      // Check domain match
+      if (entryType === 'domain' || (!whitelistedValue.includes('@') && senderDomain)) {
+        // Support wildcard domains like *.example.com
+        if (whitelistedValue.startsWith('*.')) {
+          const domainPattern = whitelistedValue.substring(2);
+          if (senderDomain === domainPattern || senderDomain?.endsWith('.' + domainPattern)) {
+            return true;
+          }
+        } else if (whitelistedValue === senderDomain) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  // Helper function to check if sender is blocked by recipient
+  const isSenderBlocked = (recipient, sender) => {
+    // Whitelist takes precedence - if whitelisted, never block
+    if (isSenderWhitelisted(recipient, sender)) {
+      return false;
+    }
+
+    if (!recipient.securitySettings?.blacklist || !Array.isArray(recipient.securitySettings.blacklist)) {
+      return false;
+    }
+
+    const blacklist = recipient.securitySettings.blacklist;
+    const senderEmail = sender.email?.toLowerCase();
+    const senderPlatformMail = sender.platformMail?.toLowerCase();
+    const senderDomain = senderEmail?.split('@')[1]?.toLowerCase();
+
+    for (const entry of blacklist) {
+      if (!entry || !entry.value) continue;
+      
+      const blockedValue = entry.value.toLowerCase().trim();
+      const entryType = entry.type?.toLowerCase();
+
+      // Check email match
+      if (entryType === 'email' || blockedValue.includes('@')) {
+        if (blockedValue === senderEmail || blockedValue === senderPlatformMail) {
+          return true;
+        }
+      }
+      
+      // Check domain match
+      if (entryType === 'domain' || (!blockedValue.includes('@') && senderDomain)) {
+        // Support wildcard domains like *.example.com
+        if (blockedValue.startsWith('*.')) {
+          const domainPattern = blockedValue.substring(2);
+          if (senderDomain === domainPattern || senderDomain?.endsWith('.' + domainPattern)) {
+            return true;
+          }
+        } else if (blockedValue === senderDomain) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  // Filter out recipients who have blocked the sender
+  const allowedRecipients = recipientUsers.filter((recipient) => {
+    const isBlocked = isSenderBlocked(recipient, fromUser);
+    if (isBlocked) {
+      console.log(`Email blocked: ${fromUser.email} is blocked by ${recipient.email}`);
+    }
+    return !isBlocked;
+  });
+
+  if (allowedRecipients.length === 0) {
+    return res.status(403).json({ 
+      message: "All recipients have blocked this sender. Email not delivered.",
+      blocked: true,
+      blockedRecipients: recipientUsers.map(u => u.email || u.platformMail)
+    });
+  }
+
+  // Track blocked recipients for response
+  const blockedRecipients = recipientUsers.filter(r => !allowedRecipients.includes(r));
+  if (blockedRecipients.length > 0) {
+    const blockedEmails = blockedRecipients.map(r => r.email || r.platformMail);
+    console.log(`Email partially blocked: ${blockedRecipients.length} recipient(s) have blocked the sender:`, blockedEmails);
+  }
+
+  const toArray = allowedRecipients.map((u) => ({ user: u._id }));
 
   // Encrypt email body
   const bodyCipherB64 = body ? encryptText(body) : "";
@@ -157,6 +269,13 @@ const sendEmail = asyncHandler(async (req, res) => {
     }
   }
 
+  // For sender's sent folder: only show security analysis if medium or high
+  // Low risk should not be shown to sender either
+  let senderSecurityAnalysis = formattedSecurityAnalysis;
+  if (senderSecurityAnalysis && senderSecurityAnalysis.riskLevel === "low") {
+    senderSecurityAnalysis = undefined; // Hide low risk from sender
+  }
+
   // Persist email in sender's sent folder
   const emailDoc = await Email.create({
     messageId: crypto.randomUUID(),
@@ -166,7 +285,7 @@ const sendEmail = asyncHandler(async (req, res) => {
     body: bodyCipherB64,
     bodyChecksum,
     attachments: mappedAttachments,
-    securityAnalysis: formattedSecurityAnalysis,
+    securityAnalysis: senderSecurityAnalysis, // Only medium/high for sender
     encryption: {
       algorithm: "AES-256-GCM",
       keyExchange: "RSA-2048",
@@ -176,8 +295,10 @@ const sendEmail = asyncHandler(async (req, res) => {
     status: "sent",
   });
 
-  // Detect phishing on incoming emails using ML model
+  // Detect phishing on incoming emails using ML model + Link Analysis
   let phishingDetectionResult = null;
+  let linkAnalysisResult = null;
+  
   try {
     // Extract plain text from body for ML model (strip HTML tags)
     const plainTextBody = body
@@ -188,40 +309,133 @@ const sendEmail = asyncHandler(async (req, res) => {
       : "";
     const emailText = `${subject || ""} ${plainTextBody}`.trim();
 
+    // Extract and analyze URLs in parallel with ML analysis
+    const urls = extractUrls(emailText);
+    console.log(urls)
+    if (urls.length > 0) {
+      try {
+        linkAnalysisResult = await analyzeUrls(urls);
+        console.log("Link analysis completed:", {
+          totalUrls: linkAnalysisResult.totalUrls,
+          malicious: linkAnalysisResult.maliciousUrls.length,
+          suspicious: linkAnalysisResult.suspiciousUrls.length,
+        });
+      } catch (error) {
+        console.error("Link analysis error:", error.message);
+      }
+    }
+
     if (emailText) {
       // Call PhishGuard ML model API
       const mlApiUrl = process.env.ML_API_URL || "http://127.0.0.1:8000";
       try {
         const mlResponse = await axios.post(
           `${mlApiUrl}/classify`,
-          { email_text: emailText },
+          { email_text: emailText, include_advanced_features: true },
           { timeout: 5000 }
         );
 
         if (mlResponse.data && mlResponse.data.is_phishing) {
           const confidence = mlResponse.data.confidence || 0.5;
           let riskLevel = "low";
+          let riskScore = Math.round(confidence * 100);
+          const detectedPatterns = [
+            `ML model detected phishing with ${Math.round(
+              confidence * 100
+            )}% confidence`,
+          ];
 
-          if (confidence >= 0.8) {
+          // Incorporate link analysis results
+          if (linkAnalysisResult) {
+            // If malicious URLs found, increase risk significantly
+            if (linkAnalysisResult.maliciousUrls.length > 0) {
+              riskScore = Math.min(100, riskScore + 30);
             riskLevel = "high";
-          } else if (confidence >= 0.6) {
+              detectedPatterns.push(
+                `${linkAnalysisResult.maliciousUrls.length} malicious URL(s) detected`
+              );
+            } else if (linkAnalysisResult.suspiciousUrls.length > 0) {
+              // Suspicious URLs increase risk moderately
+              riskScore = Math.min(100, riskScore + 15);
+              if (riskLevel === "low") {
             riskLevel = "medium";
+              }
+              detectedPatterns.push(
+                `${linkAnalysisResult.suspiciousUrls.length} suspicious URL(s) detected`
+              );
+            }
+
+            // Add link analysis indicators
+            if (linkAnalysisResult.indicators && linkAnalysisResult.indicators.length > 0) {
+              detectedPatterns.push(
+                ...linkAnalysisResult.indicators.map((ind) => ind.description)
+              );
+            }
+          }
+
+          // Recalculate risk level based on final score
+          if (riskScore >= 80) {
+            riskLevel = "high";
+          } else if (riskScore >= 60) {
+            riskLevel = "medium";
+          } else {
+            riskLevel = "low";
           }
 
           phishingDetectionResult = {
-            riskScore: Math.round(confidence * 100),
+            riskScore: riskScore,
             riskLevel: riskLevel,
             confidence: confidence,
             isPhishing: true,
-            detectedPatterns: [
-              `ML model detected phishing with ${Math.round(
-                confidence * 100
-              )}% confidence`,
-            ],
+            detectedPatterns: detectedPatterns,
+            linkAnalysis: linkAnalysisResult,
+          };
+        } else if (linkAnalysisResult && (linkAnalysisResult.maliciousUrls.length > 0 || linkAnalysisResult.suspiciousUrls.length > 0)) {
+          // Even if ML doesn't detect phishing, malicious links are a threat
+          let riskLevel = "low";
+          let riskScore = 0;
+          
+          if (linkAnalysisResult.maliciousUrls.length > 0) {
+            riskLevel = "high";
+            riskScore = 85;
+          } else if (linkAnalysisResult.suspiciousUrls.length > 0) {
+            riskLevel = "medium";
+            riskScore = 65;
+          }
+
+          phishingDetectionResult = {
+            riskScore: riskScore,
+            riskLevel: riskLevel,
+            confidence: riskScore / 100,
+            isPhishing: true,
+            detectedPatterns: linkAnalysisResult.indicators.map((ind) => ind.description),
+            linkAnalysis: linkAnalysisResult,
           };
         }
       } catch (error) {
         console.error("ML model API error:", error.message);
+        // If ML fails but we have link analysis, use that
+        if (linkAnalysisResult && (linkAnalysisResult.maliciousUrls.length > 0 || linkAnalysisResult.suspiciousUrls.length > 0)) {
+          let riskLevel = "low";
+          let riskScore = 0;
+          
+          if (linkAnalysisResult.maliciousUrls.length > 0) {
+            riskLevel = "high";
+            riskScore = 85;
+          } else if (linkAnalysisResult.suspiciousUrls.length > 0) {
+            riskLevel = "medium";
+            riskScore = 65;
+          }
+
+          phishingDetectionResult = {
+            riskScore: riskScore,
+            riskLevel: riskLevel,
+            confidence: riskScore / 100,
+            isPhishing: true,
+            detectedPatterns: linkAnalysisResult.indicators.map((ind) => ind.description),
+            linkAnalysis: linkAnalysisResult,
+          };
+        }
       }
     }
   } catch (error) {
@@ -326,12 +540,19 @@ const sendEmail = asyncHandler(async (req, res) => {
     }
   }
   // Determine mailbox based on risk level
+  // Only medium, high, and critical go to spam
+  // Low risk emails go to inbox without warnings
   const shouldGoToSpam =
     finalSecurityAnalysis &&
     ["medium", "high", "critical"].includes(finalSecurityAnalysis.riskLevel);
 
-  // Create copies for each recipient in their inbox or spam
-  for (const recipient of recipientUsers) {
+  // For low risk, don't show security analysis to receiver
+  if (finalSecurityAnalysis && finalSecurityAnalysis.riskLevel === "low") {
+    finalSecurityAnalysis = undefined; // Hide low risk from receiver
+  }
+
+  // Create copies for each allowed recipient in their inbox or spam
+  for (const recipient of allowedRecipients) {
     // find encrypted key by email if provided
     const wrapped = Array.isArray(encryptedKeys)
       ? encryptedKeys.find((k) => {
@@ -412,9 +633,9 @@ const sendEmail = asyncHandler(async (req, res) => {
     });
   }
 
-  // Notify recipients via FCM if token exists
+  // Notify allowed recipients via FCM if token exists
   try {
-    const tokens = recipientUsers
+    const tokens = allowedRecipients
       .map((u) => u.securitySettings?.notifications?.fcmToken)
       .filter(Boolean);
     if (tokens.length) {
@@ -427,7 +648,7 @@ const sendEmail = asyncHandler(async (req, res) => {
         tokens,
       };
       // Create a mapping of tokens to user IDs for error handling
-      const tokenUserMap = recipientUsers
+      const tokenUserMap = allowedRecipients
         .map((u, index) => ({
           userId: u._id,
           token: u.securitySettings?.notifications?.fcmToken,
@@ -473,9 +694,19 @@ const sendEmail = asyncHandler(async (req, res) => {
     console.error("FCM notify error:", e.message);
   }
 
-  return res
-    .status(201)
-    .json({ success: true, id: emailDoc._id, missingRecipients: missing });
+  // Prepare response with blocklist information
+  const blockedEmails = blockedRecipients.length > 0 
+    ? blockedRecipients.map(r => r.email || r.platformMail)
+    : [];
+
+  return res.status(201).json({ 
+    success: true, 
+    id: emailDoc._id, 
+    missingRecipients: missing,
+    blockedRecipients: blockedEmails,
+    deliveredTo: allowedRecipients.length,
+    totalRecipients: recipientUsers.length
+  });
 });
 
 const showEmailList = asyncHandler(async (req, res) => {

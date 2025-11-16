@@ -138,6 +138,7 @@ export default function MailCards({ isDark, emails = [], setSelectedEmail, isTra
                 const level = String(
                   email.securityAnalysis?.riskLevel || ""
                 ).toLowerCase();
+                // Don't show badges for low, minimal, or safe risk levels
                 if (
                   !level ||
                   level === "low" ||
@@ -145,14 +146,19 @@ export default function MailCards({ isDark, emails = [], setSelectedEmail, isTra
                   level === "safe"
                 )
                   return null;
+                
+                // Only show high and medium risk badges
+                const isHigh = level === "high" || level === "critical";
+                const isMedium = level === "medium";
+                
+                if (!isHigh && !isMedium) return null;
+                
                 return (
                   <span
                     className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg whitespace-nowrap ${
-                      level === "high" || level === "critical"
+                      isHigh
                         ? "bg-[#E50914] text-white"
-                        : level === "medium"
-                        ? "bg-yellow-400 text-black"
-                        : "bg-gray-200 text-black"
+                        : "bg-yellow-400 text-black"
                     }`}
                   >
                     <svg
@@ -169,7 +175,7 @@ export default function MailCards({ isDark, emails = [], setSelectedEmail, isTra
                         d="M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0Z"
                       />
                     </svg>
-                    {`Risk: ${String(level).toUpperCase()}`}
+                    {isHigh ? "HIGH RISK" : "MEDIUM RISK"}
                   </span>
                 );
               })()}

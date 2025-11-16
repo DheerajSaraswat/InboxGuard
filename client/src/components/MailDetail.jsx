@@ -287,13 +287,24 @@ export default function MailDetail({ email, onBack, onDelete, isDark, isBusy = f
       >
           {(() => {
             const level = String(email?.securityAnalysis?.riskLevel || '').toLowerCase();
+            // Don't show warnings for low, minimal, or safe risk levels
             if (!level || level === 'low' || level === 'minimal' || level === 'safe') return null;
+            
+            // Only show high/medium warnings to receivers
+            const isHigh = level === 'high' || level === 'critical';
+            const isMedium = level === 'medium';
+            
+            if (!isHigh && !isMedium) return null;
+            
             return (
-              <div className={`mb-2 px-3 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-2 ${
-                level === 'high' || level === 'critical' ? 'bg-red-600 text-white' : 'bg-yellow-400 text-black'
+              <div className={`mb-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold inline-flex items-center gap-2 ${
+                isHigh ? 'bg-red-600 text-white' : 'bg-yellow-400 text-black'
               }`}>
                 <svg xmlns='http://www.w3.org/2000/svg' className='w-4 h-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0Z' /></svg>
-                {`Security Risk: ${level.toUpperCase()}`}
+                {isHigh 
+                  ? `HIGH RISK: This email contains suspicious content. Verify all links and sender information.`
+                  : `MEDIUM RISK: This email may contain suspicious content. Please review carefully.`
+                }
               </div>
             );
           })()}

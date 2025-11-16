@@ -19,6 +19,7 @@
     "express": "^5.1.0",
     "firebase-admin": "^13.5.0",
     "fs": "^0.0.1-security",
+    "jsdom": "^27.2.0",
     "mongodb": "^6.19.0",
     "mongoose": "^8.18.1",
     "multer": "^2.0.2",

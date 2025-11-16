@@ -50,7 +50,6 @@ export default function SpamPage({ isDark: isDarkProp }) {
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [isEmptying, setIsEmptying] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
   const normalize = (s = "") => String(s || "").toLowerCase();
   const matchesQuery = (email) => {
     if (!searchQuery) return true;

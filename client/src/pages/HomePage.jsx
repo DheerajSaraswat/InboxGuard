@@ -408,10 +408,14 @@ const HomePage = ({ isDark }) => {
             without compromising your data.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-[#E50914] hover:bg-red-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all">
+            <button onClick={()=>Navigate("/signin")} className="bg-[#E50914] hover:bg-red-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all">
               Get Started Free
             </button>
             <button
+              onClick={() => {
+                window.location.href =
+                  "https://github.com/DheerajSaraswat/InboxGuard";
+              }}
               className={`border ${
                 isDark
                   ? "border-[#2E2E2E] hover:border-white text-white"
