@@ -25,5 +25,9 @@ app.use("/api/users",userRouter);
 app.use("/api/emails",emailRouter)
 app.use("/api/report", reportRouter)
 app.use("/api/ml", modelRouter)
+app.get("/api/health", (req, res) => {
+  res.status(200).send("OK");
+});
+
 
 export {app};
