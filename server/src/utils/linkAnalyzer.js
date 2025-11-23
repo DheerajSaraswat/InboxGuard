@@ -1,50 +1,17 @@
 import axios from "axios";
 import crypto from "crypto";
-import { JSDOM } from "jsdom";
 
-export function htmlToText(html) {
-  const dom = new JSDOM(html);
-  return dom.window.document.body.textContent;
-}
+/**
+ * Link Analyzer for Phishing Detection
+ * Uses multiple methods to check URLs for phishing indicators
+ */
 
-function separateMergedDomains(text) {
-  return (
-    text
-      // Case 1: .comNavigate  (no dot)
-      .replace(/(\.[a-zA-Z0-9]{2,})([A-Z][a-z]+)/g, "$1 $2")
-      // Case 2: .com.Navigate  (your actual case)
-      .replace(/(\.[a-zA-Z0-9]{2,})\.(?=[A-Z][a-z]+)/g, "$1 ")
-  );
-}
-
-
+// Extract URLs from text
 export function extractUrls(text) {
   if (!text) return [];
-  console.log(text);
-  // 1. Convert HTML → text
-  let content = htmlToText(text);
-  console.log(content);
-  // 2. Fix domain merging: .comNavigate → .com Navigate
-  content = separateMergedDomains(content);
-
-  // 3. Normalize whitespace
-  content = content.replace(/\s+/g, " ").trim();
-  console.log(content);
-  // 4. Regex to extract URLs
-  const urlRegex =
-    /\b((https?:\/\/)|(www\.))[\w.-]+\.[a-zA-Z0-9]{2,}(\/[^\s<>()]*)?/gi;
-
-  const matches = content.match(urlRegex) || [];
-
-  // 5. Clean trailing punctuation
-  const cleaned = matches.map((url) => url.replace(/[.,!?;:]+$/g, ""));
-
-  // 6. Normalize (add https)
-  const normalized = cleaned.map((url) =>
-    url.startsWith("www.") ? "https://" + url : url
-  );
-
-  return [...new Set(normalized)];
+  const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
+  const matches = text.match(urlRegex) || [];
+  return [...new Set(matches)]; // Remove duplicates
 }
 
 // Check URL using Google Safe Browsing API (if API key is available)
@@ -69,12 +36,8 @@ async function checkGoogleSafeBrowsing(url, apiKey) {
       },
       { timeout: 5000 }
     );
-    console.log(response.data);
-    if (
-      response.data &&
-      response.data.matches &&
-      response.data.matches.length > 0
-    ) {
+
+    if (response.data && response.data.matches && response.data.matches.length > 0) {
       return {
         isMalicious: true,
         threatType: response.data.matches[0].threatType,
@@ -111,7 +74,7 @@ async function checkURLScan(url) {
     if (submitResponse.data && submitResponse.data.uuid) {
       // Wait a bit and check result
       await new Promise((resolve) => setTimeout(resolve, 2000));
-
+      
       const resultResponse = await axios.get(
         `https://urlscan.io/api/v1/result/${submitResponse.data.uuid}/`,
         { timeout: 5000 }
@@ -119,7 +82,7 @@ async function checkURLScan(url) {
 
       if (resultResponse.data && resultResponse.data.verdicts) {
         const verdicts = resultResponse.data.verdicts;
-        const isMalicious =
+        const isMalicious = 
           verdicts.overall?.malicious === true ||
           verdicts.overall?.suspicious === true ||
           verdicts.engines?.some((engine) => engine.malicious === true);
@@ -212,11 +175,7 @@ function analyzeUrlHeuristics(url) {
 
     // Check for suspicious path patterns
     const suspiciousPaths = ["verify", "confirm", "update", "secure", "login"];
-    if (
-      suspiciousPaths.some((path) =>
-        urlObj.pathname.toLowerCase().includes(path)
-      )
-    ) {
+    if (suspiciousPaths.some((path) => urlObj.pathname.toLowerCase().includes(path))) {
       analysis.riskScore += 10;
       analysis.riskFactors.push("Suspicious URL path");
     }
@@ -296,9 +255,7 @@ export async function analyzeUrls(urls) {
       indicators.push({
         type: "suspicious_link",
         severity: heuristicAnalysis.riskScore >= 50 ? "high" : "medium",
-        description: `Suspicious URL detected: ${url} - ${heuristicAnalysis.riskFactors.join(
-          ", "
-        )}`,
+        description: `Suspicious URL detected: ${url} - ${heuristicAnalysis.riskFactors.join(", ")}`,
         detected: true,
       });
       maxRiskScore = Math.max(maxRiskScore, heuristicAnalysis.riskScore);
@@ -313,3 +270,4 @@ export async function analyzeUrls(urls) {
     indicators,
   };
 }
+

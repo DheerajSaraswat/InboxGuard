@@ -65,7 +65,7 @@ export default function DraftsPage() {
     if (!searchQuery) return true;
     const q = normalize(searchQuery);
     const subject = normalize(draft.subject || "");
-    const toEmail = draft.to && draft.to[0] ? normalize(draft.to[0].user?.email || "") : "";
+    const toEmail = draft.to && draft.to[0] ? normalize(draft.to[0].user?.platformMail || draft.to[0].user?.email || "") : "";
     const bodyPreview = normalize(draft.bodyPreview || "");
     return (
       subject.includes(q) ||
@@ -118,9 +118,8 @@ export default function DraftsPage() {
   return (
     <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-x-hidden">
       <div
-        className={`border-b p-4 ${
-          isDark ? "bg-[#232326]" : "bg-white"
-        } border-gray-200`}
+        className={`border-b p-4 ${isDark ? "bg-[#232326]" : "bg-white"
+          } border-gray-200`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
@@ -141,9 +140,8 @@ export default function DraftsPage() {
           </div>
           <div className="flex items-center gap-4">
             <button
-              className={`bg-transparent p-2 rounded-full hover:${
-                isDark ? "bg-[#232326]" : "bg-[#f3f4f6]"
-              } ${isDark ? "text-yellow-400" : "text-[#111]"}`}
+              className={`bg-transparent p-2 rounded-full hover:${isDark ? "bg-[#232326]" : "bg-[#f3f4f6]"
+                } ${isDark ? "text-yellow-400" : "text-[#111]"}`}
               onClick={() => dispatch(toggleTheme())}
               title={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
@@ -154,9 +152,8 @@ export default function DraftsPage() {
               )}
             </button>
             <div
-              className={`relative flex items-center gap-1 px-3 py-2 rounded-lg ${
-                isDark ? "text-[#f3f4f6] bg-[#232326]" : "text-[#111]"
-              } cursor-pointer`}
+              className={`relative flex items-center gap-1 px-3 py-2 rounded-lg ${isDark ? "text-[#f3f4f6] bg-[#232326]" : "text-[#111]"
+                } cursor-pointer`}
             >
               <div
                 className="flex items-center gap-1"
@@ -164,26 +161,23 @@ export default function DraftsPage() {
               >
                 <img
                   src={user?.displayImage}
-                  className={`w-8 h-8 ${
-                    isDark
+                  className={`w-8 h-8 ${isDark
                       ? "text-[#f3f4f6] bg-[#232326]"
                       : "text-[#111] bg-[#e5e7eb]"
-                  } rounded-full p-1`}
+                    } rounded-full p-1`}
                 />
                 <ChevronDown
-                  className={`w-4 h-4 stroke-[3] ${
-                    isDark ? "text-[#f3f4f6]" : "text-[#111]"
-                  }`}
+                  className={`w-4 h-4 stroke-[3] ${isDark ? "text-[#f3f4f6]" : "text-[#111]"
+                    }`}
                 />
               </div>
 
               {showDropdown && (
                 <div
-                  className={`absolute right-0 top-full mt-2 w-56 ${
-                    isDark
+                  className={`absolute right-0 top-full mt-2 w-56 ${isDark
                       ? "bg-[#232326] border-[#232326]"
                       : "bg-white border-[#e5e7eb]"
-                  } border rounded-2xl shadow-xl z-10 py-2 font-sans`}
+                    } border rounded-2xl shadow-xl z-10 py-2 font-sans`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
@@ -192,38 +186,32 @@ export default function DraftsPage() {
                       navigate("/user/u0/profile");
                       setShowDropdown(false);
                     }}
-                    className={`flex items-center gap-3 w-full text-left px-5 py-3 hover:${
-                      isDark ? "bg-[#18181b]" : "bg-[#f3f4f6]"
-                    } rounded-xl ${
-                      isDark ? "text-[#f3f4f6]" : "text-[#111]"
-                    } text-xl font-semibold`}
+                    className={`flex items-center gap-3 w-full text-left px-5 py-3 hover:${isDark ? "bg-[#18181b]" : "bg-[#f3f4f6]"
+                      } rounded-xl ${isDark ? "text-[#f3f4f6]" : "text-[#111]"
+                      } text-xl font-semibold`}
                   >
                     <UserCircle
-                      className={`w-8 h-8 ${
-                        isDark
+                      className={`w-8 h-8 ${isDark
                           ? "bg-[#18181b] text-[#f3f4f6]"
                           : "bg-[#e5e7eb] text-[#111]"
-                      } rounded-full p-1`}
+                        } rounded-full p-1`}
                     />
                     <span className="pl-2">Profile</span>
                   </button>
 
                   <div
-                    className={`border-t ${
-                      isDark ? "border-[#18181b]" : "border-gray-400"
-                    } mx-4 my-2`}
+                    className={`border-t ${isDark ? "border-[#18181b]" : "border-gray-400"
+                      } mx-4 my-2`}
                   />
 
                   <button
-                    className={`flex items-center gap-3 w-full text-left px-5 py-3 ${
-                      isDark ? "hover:bg-[#18181b]" : "hover:bg-[#fbe9ea]"
-                    } text-[#E50914] transition-all duration-150 rounded-xl font-semibold text-xl`}
+                    className={`flex items-center gap-3 w-full text-left px-5 py-3 ${isDark ? "hover:bg-[#18181b]" : "hover:bg-[#fbe9ea]"
+                      } text-[#E50914] transition-all duration-150 rounded-xl font-semibold text-xl`}
                     onMouseDown={handleLogOut}
                   >
                     <LogOut
-                      className={`w-8 h-8 text-[#E50914] ${
-                        isDark ? "bg-[#18181b]" : "bg-[#fbe9ea]"
-                      } rounded-full p-1`}
+                      className={`w-8 h-8 text-[#E50914] ${isDark ? "bg-[#18181b]" : "bg-[#fbe9ea]"
+                        } rounded-full p-1`}
                     />
                     <span className="pl-2">Logout</span>
                   </button>
@@ -235,14 +223,12 @@ export default function DraftsPage() {
       </div>
       <div className="flex-1 flex min-h-0 min-w-0 overflow-x-hidden">
         <div
-          className={`flex-1 flex flex-col min-h-0 min-w-0 ${
-            isDark ? "bg-[#18181b]" : "bg-white"
-          }`}
+          className={`flex-1 flex flex-col min-h-0 min-w-0 ${isDark ? "bg-[#18181b]" : "bg-white"
+            }`}
         >
           <div
-            className={`p-4 border-b ${
-              isDark ? "bg-[#232326]" : "bg-white"
-            } border-gray-200`}
+            className={`p-4 border-b ${isDark ? "bg-[#232326]" : "bg-white"
+              } border-gray-200`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -252,11 +238,10 @@ export default function DraftsPage() {
             </div>
           </div>
           <div
-            className={`flex-1 overflow-y-auto min-w-0 ${
-              isDark
+            className={`flex-1 overflow-y-auto min-w-0 ${isDark
                 ? "bg-gradient-to-b from-[#18181b] via-[#232326] to-[#18181b]"
                 : "bg-[#F3F6FA]"
-            } p-8`}
+              } p-8`}
           >
             {filteredDrafts.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -275,46 +260,41 @@ export default function DraftsPage() {
                 {filteredDrafts.map((draft) => (
                   <div
                     key={draft._id}
-                    className={`rounded-3xl flex p-4 px-10 cursor-pointer transition-all duration-200 shadow-2xl hover:scale-[1.01] border-2 ${
-                      isDark
+                    className={`rounded-3xl flex p-4 px-10 cursor-pointer transition-all duration-200 shadow-2xl hover:scale-[1.01] border-2 ${isDark
                         ? "bg-gradient-to-br from-[#232326]/90 via-[#18181b]/90 to-[#232326]/80 border-[#232326] backdrop-blur-[2px]"
                         : "bg-white border-[#e5e7eb]"
-                    }`}
+                      }`}
                     onClick={() => navigate(`/user/u0/compose?draft=${draft._id}`)}
                   >
                     <div className={`flex items-center gap-4`}>
                       <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center font-bold relative ${
-                          isDark
+                        className={`w-12 h-12 rounded-full flex items-center justify-center font-bold relative ${isDark
                             ? "bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-blue-200"
                             : "bg-blue-300 text-white"
-                        } text-xl`}
+                          } text-xl`}
                       >
                         {draft.to && draft.to[0]
-                          ? draft.to[0].user?.email?.[0]?.toUpperCase() || "D"
+                          ? (draft.to[0].user?.platformMail || draft.to[0].user?.email || "D")?.[0]?.toUpperCase()
                           : "D"}
                       </div>
                       <div className="flex flex-col gap-1">
                         <span
-                          className={`text-base font-semibold ${
-                            isDark ? "text-blue-200" : "text-black"
-                          }`}
+                          className={`text-base font-semibold ${isDark ? "text-blue-200" : "text-black"
+                            }`}
                         >
                           {draft.to && draft.to[0]
-                            ? draft.to[0].user?.email || "(Draft)"
+                            ? draft.to[0].user?.platformMail || draft.to[0].user?.email || "(Draft)"
                             : "(Draft)"}
                         </span>
                         <span
-                          className={`font-bold text-xl ${
-                            isDark ? "text-white" : "text-black"
-                          } font-sans`}
+                          className={`font-bold text-xl ${isDark ? "text-white" : "text-black"
+                            } font-sans`}
                         >
                           {draft.subject || "(No Subject)"}
                         </span>
                         <span
-                          className={`text-base ${
-                            isDark ? "text-gray-300" : "text-gray-500"
-                          }`}
+                          className={`text-base ${isDark ? "text-gray-300" : "text-gray-500"
+                            }`}
                         >
                           {draft.bodyPreview
                             ? draft.bodyPreview.slice(0, 80)
@@ -328,9 +308,8 @@ export default function DraftsPage() {
                     <div className="flex ml-auto flex-col gap-2">
                       <div className="flex flex-col justify-between ml-auto">
                         <span
-                          className={`text-sm ${
-                            isDark ? "text-gray-400" : "text-gray-500"
-                          }`}
+                          className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"
+                            }`}
                         >
                           {new Date(draft.createdAt).toLocaleString()}
                         </span>

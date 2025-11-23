@@ -63,7 +63,7 @@ const sendEmail = asyncHandler(async (req, res) => {
 
     for (const entry of whitelist) {
       if (!entry || !entry.value) continue;
-      
+
       const whitelistedValue = entry.value.toLowerCase().trim();
       const entryType = entry.type?.toLowerCase();
 
@@ -73,7 +73,7 @@ const sendEmail = asyncHandler(async (req, res) => {
           return true;
         }
       }
-      
+
       // Check domain match
       if (entryType === 'domain' || (!whitelistedValue.includes('@') && senderDomain)) {
         // Support wildcard domains like *.example.com
@@ -109,7 +109,7 @@ const sendEmail = asyncHandler(async (req, res) => {
 
     for (const entry of blacklist) {
       if (!entry || !entry.value) continue;
-      
+
       const blockedValue = entry.value.toLowerCase().trim();
       const entryType = entry.type?.toLowerCase();
 
@@ -119,7 +119,7 @@ const sendEmail = asyncHandler(async (req, res) => {
           return true;
         }
       }
-      
+
       // Check domain match
       if (entryType === 'domain' || (!blockedValue.includes('@') && senderDomain)) {
         // Support wildcard domains like *.example.com
@@ -147,7 +147,7 @@ const sendEmail = asyncHandler(async (req, res) => {
   });
 
   if (allowedRecipients.length === 0) {
-    return res.status(403).json({ 
+    return res.status(403).json({
       message: "All recipients have blocked this sender. Email not delivered.",
       blocked: true,
       blockedRecipients: recipientUsers.map(u => u.email || u.platformMail)
@@ -186,8 +186,8 @@ const sendEmail = asyncHandler(async (req, res) => {
         ? att.encryptedSize
         : undefined
       : typeof att.originalSize === "number"
-      ? att.originalSize
-      : undefined;
+        ? att.originalSize
+        : undefined;
     const mimeType = att.mimeType;
     const cloudinaryUrl = att.url;
     const checksumSource = isEncrypted
@@ -219,11 +219,11 @@ const sendEmail = asyncHandler(async (req, res) => {
       riskLevel: phishingReport.riskLevel || "medium",
       indicators: Array.isArray(phishingReport.indicators)
         ? phishingReport.indicators.map((ind) => ({
-            type: ind.type || "auto_detected",
-            severity: ind.severity || phishingReport.riskLevel || "medium",
-            description: ind.description || "Phishing detected",
-            detected: ind.detected !== undefined ? ind.detected : true,
-          }))
+          type: ind.type || "auto_detected",
+          severity: ind.severity || phishingReport.riskLevel || "medium",
+          description: ind.description || "Phishing detected",
+          detected: ind.detected !== undefined ? ind.detected : true,
+        }))
         : [],
       analyzedAt: phishingReport.analyzedAt || new Date(),
       bypassedByUser: phishingReport.bypassedByUser || false,
@@ -233,12 +233,12 @@ const sendEmail = asyncHandler(async (req, res) => {
   // Find sender's encrypted key from the encryptedKeys array
   const senderEncryptedKey = Array.isArray(encryptedKeys)
     ? encryptedKeys.find((k) => {
-        const keyEmail = String(k.email || "").toLowerCase();
-        return (
-          keyEmail === String(fromUser.email || "").toLowerCase() ||
-          keyEmail === String(fromUser.platformMail || "").toLowerCase()
-        );
-      })
+      const keyEmail = String(k.email || "").toLowerCase();
+      return (
+        keyEmail === String(fromUser.email || "").toLowerCase() ||
+        keyEmail === String(fromUser.platformMail || "").toLowerCase()
+      );
+    })
     : null;
 
   // Build encryptedKeys array for sender's sent folder
@@ -298,20 +298,19 @@ const sendEmail = asyncHandler(async (req, res) => {
   // Detect phishing on incoming emails using ML model + Link Analysis
   let phishingDetectionResult = null;
   let linkAnalysisResult = null;
-  
+
   try {
     // Extract plain text from body for ML model (strip HTML tags)
     const plainTextBody = body
       ? body
-          .replace(/<[^>]*>/g, "")
-          .replace(/\s+/g, " ")
-          .trim()
+        .replace(/<[^>]*>/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
       : "";
     const emailText = `${subject || ""} ${plainTextBody}`.trim();
 
     // Extract and analyze URLs in parallel with ML analysis
     const urls = extractUrls(emailText);
-    console.log(urls)
     if (urls.length > 0) {
       try {
         linkAnalysisResult = await analyzeUrls(urls);
@@ -350,7 +349,7 @@ const sendEmail = asyncHandler(async (req, res) => {
             // If malicious URLs found, increase risk significantly
             if (linkAnalysisResult.maliciousUrls.length > 0) {
               riskScore = Math.min(100, riskScore + 30);
-            riskLevel = "high";
+              riskLevel = "high";
               detectedPatterns.push(
                 `${linkAnalysisResult.maliciousUrls.length} malicious URL(s) detected`
               );
@@ -358,7 +357,7 @@ const sendEmail = asyncHandler(async (req, res) => {
               // Suspicious URLs increase risk moderately
               riskScore = Math.min(100, riskScore + 15);
               if (riskLevel === "low") {
-            riskLevel = "medium";
+                riskLevel = "medium";
               }
               detectedPatterns.push(
                 `${linkAnalysisResult.suspiciousUrls.length} suspicious URL(s) detected`
@@ -394,7 +393,7 @@ const sendEmail = asyncHandler(async (req, res) => {
           // Even if ML doesn't detect phishing, malicious links are a threat
           let riskLevel = "low";
           let riskScore = 0;
-          
+
           if (linkAnalysisResult.maliciousUrls.length > 0) {
             riskLevel = "high";
             riskScore = 85;
@@ -418,7 +417,7 @@ const sendEmail = asyncHandler(async (req, res) => {
         if (linkAnalysisResult && (linkAnalysisResult.maliciousUrls.length > 0 || linkAnalysisResult.suspiciousUrls.length > 0)) {
           let riskLevel = "low";
           let riskScore = 0;
-          
+
           if (linkAnalysisResult.maliciousUrls.length > 0) {
             riskLevel = "high";
             riskScore = 85;
@@ -449,12 +448,12 @@ const sendEmail = asyncHandler(async (req, res) => {
     // Ensure detectedPatterns is an array of strings
     const patterns = Array.isArray(phishingDetectionResult.detectedPatterns)
       ? phishingDetectionResult.detectedPatterns.map(
-          (p) => p?.toString?.() || String(p)
-        )
+        (p) => p?.toString?.() || String(p)
+      )
       : [
-          phishingDetectionResult.detectedPatterns ||
-            "ML model detected phishing",
-        ]; // fallback
+        phishingDetectionResult.detectedPatterns ||
+        "ML model detected phishing",
+      ]; // fallback
 
     // Create indicators array as plain JavaScript objects (no Mongoose Document objects)
     const indicatorsArray = [];
@@ -556,12 +555,12 @@ const sendEmail = asyncHandler(async (req, res) => {
     // find encrypted key by email if provided
     const wrapped = Array.isArray(encryptedKeys)
       ? encryptedKeys.find((k) => {
-          const normalized = String(k.email).toLowerCase();
-          return (
-            normalized === String(recipient.email).toLowerCase() ||
-            normalized === String(recipient.platformMail).toLowerCase()
-          );
-        })
+        const normalized = String(k.email).toLowerCase();
+        return (
+          normalized === String(recipient.email).toLowerCase() ||
+          normalized === String(recipient.platformMail).toLowerCase()
+        );
+      })
       : null;
 
     const inboxDoc = await Email.create({
@@ -578,12 +577,12 @@ const sendEmail = asyncHandler(async (req, res) => {
         keyExchange: "RSA-2048",
         encryptedKeys: wrapped?.encryptedAESKey
           ? [
-              {
-                recipient: recipient._id,
-                email: recipient.email,
-                encryptedAESKey: wrapped.encryptedAESKey,
-              },
-            ]
+            {
+              recipient: recipient._id,
+              email: recipient.email,
+              encryptedAESKey: wrapped.encryptedAESKey,
+            },
+          ]
           : [],
       },
       mailbox: shouldGoToSpam ? "spam" : "inbox",
@@ -624,7 +623,7 @@ const sendEmail = asyncHandler(async (req, res) => {
       message: subject || "Encrypted message",
       priority:
         phishingReport?.riskLevel &&
-        ["high", "critical"].includes(phishingReport.riskLevel)
+          ["high", "critical"].includes(phishingReport.riskLevel)
           ? "high"
           : "normal",
       data: { email: inboxDoc._id },
@@ -695,13 +694,13 @@ const sendEmail = asyncHandler(async (req, res) => {
   }
 
   // Prepare response with blocklist information
-  const blockedEmails = blockedRecipients.length > 0 
+  const blockedEmails = blockedRecipients.length > 0
     ? blockedRecipients.map(r => r.email || r.platformMail)
     : [];
 
-  return res.status(201).json({ 
-    success: true, 
-    id: emailDoc._id, 
+  return res.status(201).json({
+    success: true,
+    id: emailDoc._id,
     missingRecipients: missing,
     blockedRecipients: blockedEmails,
     deliveredTo: allowedRecipients.length,
@@ -1017,6 +1016,15 @@ const saveDraft = asyncHandler(async (req, res) => {
   const fromUser = await User.findOne({ firebaseUid: user_id });
   if (!fromUser) return res.status(404).json({ message: "User not found" });
 
+  // Resolve recipients
+  let toArray = [];
+  if (Array.isArray(to) && to.length > 0) {
+    const recipientUsers = await User.find({
+      $or: [{ platformMail: { $in: to } }, { email: { $in: to } }],
+    });
+    toArray = recipientUsers.map((u) => ({ user: u._id }));
+  }
+
   // Encrypt email body
   const bodyCipherB64 = body ? encryptText(body) : "";
   const bodyChecksum = crypto
@@ -1037,8 +1045,8 @@ const saveDraft = asyncHandler(async (req, res) => {
         ? att.encryptedSize
         : undefined
       : typeof att.originalSize === "number"
-      ? att.originalSize
-      : undefined;
+        ? att.originalSize
+        : undefined;
     const mimeType = att.mimeType;
     const cloudinaryUrl = att.url;
     const checksumSource = isEncrypted
@@ -1065,7 +1073,7 @@ const saveDraft = asyncHandler(async (req, res) => {
   const draftDoc = await Email.create({
     messageId: crypto.randomUUID(),
     from: fromUser._id,
-    to: to ? [{ user: fromUser._id }] : [],
+    to: toArray,
     subject: subject || "",
     body: bodyCipherB64,
     bodyChecksum,
@@ -1161,7 +1169,7 @@ const getAttachmentsMeta = asyncHandler(async (req, res) => {
   }
 
   let encryptedAESKey = keyRecord?.encryptedAESKey || null;
-  
+
   // Debug logging
   if (!encryptedAESKey) {
     console.warn(`No encrypted key found for user ${user.email} (${user.platformMail}) in email ${id}`, {
@@ -1175,8 +1183,8 @@ const getAttachmentsMeta = asyncHandler(async (req, res) => {
   }
 
   if (!encryptedAESKey) {
-    return res.status(404).json({ 
-      message: "Encrypted AES key not found for this user. You may not have access to decrypt this attachment." 
+    return res.status(404).json({
+      message: "Encrypted AES key not found for this user. You may not have access to decrypt this attachment."
     });
   }
 

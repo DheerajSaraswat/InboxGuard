@@ -42,6 +42,7 @@ import LinkExt from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
 import Blockquote from "@tiptap/extension-blockquote";
 import axios from "axios";
+import { getEmailById } from "../apiRequests/getEmailById";
 
 const EmailEditor = ({ isDark }) => {
   const location = useLocation();
@@ -289,8 +290,9 @@ const EmailEditor = ({ isDark }) => {
 
     try {
       // Call ML model directly from frontend to save time
-      const mlApiUrl = import.meta.env.VITE_ML_API_URL;
+      const mlApiUrl = import.meta.env.VITE_ML_API_URL || "https://inboxguard-production.up.railway.app";
       const baseUrl = mlApiUrl.replace(/\/$/, "");
+      console.log(baseUrl);
       const response = await axios.post(
         `${baseUrl}/classify`,
         { email_text: text },
@@ -306,12 +308,12 @@ const EmailEditor = ({ isDark }) => {
 
       // Check if phishing detected (using classification or is_phishing)
       const isPhishing = response.data.classification === "phishing" || response.data.is_phishing === true;
-      
+
       if (isPhishing) {
         // Phishing detected - create phishing report
         const confidence = response.data.confidence || 0.85;
         const confidencePercent = Math.round(confidence * 100);
-        
+
         // Determine risk level based on confidence
         let riskLevel = "low";
         if (confidence >= 0.8) {
@@ -319,7 +321,7 @@ const EmailEditor = ({ isDark }) => {
         } else if (confidence >= 0.6) {
           riskLevel = "medium";
         }
-        
+
         const phishingReport = {
           reportedBy: "system",
           reportedAt: new Date().toISOString(),
@@ -346,7 +348,7 @@ const EmailEditor = ({ isDark }) => {
           await sendEmail(phishingReport);
           return;
         }
-        
+
         // Medium/High risk — show phishing alert to sender
         setScanResult({
           riskLevel: phishingReport.riskLevel,
@@ -366,14 +368,14 @@ const EmailEditor = ({ isDark }) => {
     } catch (error) {
       console.error("Phishing scan error:", error);
       setIsScanning(false);
-      
+
       // Show user-friendly error message
-      const errorMessage = error.code === "ECONNABORTED" 
+      const errorMessage = error.code === "ECONNABORTED"
         ? "Phishing scan timed out. The ML model may be slow or unavailable."
         : error.response?.data?.message || error.message || "Phishing scan failed.";
-      
+
       toast.error(errorMessage);
-      
+
       // If ML model fails or times out, ask user if they want to send anyway
       const shouldSend = window.confirm(
         `${errorMessage}\n\nDo you want to send the email anyway?`
@@ -426,7 +428,7 @@ const EmailEditor = ({ isDark }) => {
         headers: { "Content-Type": "application/json" },
       });
       toast.success("Email sent");
-      
+
       // Show warning if some recipients blocked the sender
       if (
         Array.isArray(data?.blockedRecipients) &&
@@ -444,7 +446,7 @@ const EmailEditor = ({ isDark }) => {
           </div>
         ));
       }
-      
+
       // Show info if some recipients were not found
       if (
         Array.isArray(data?.missingRecipients) &&
@@ -459,7 +461,7 @@ const EmailEditor = ({ isDark }) => {
           </div>
         ));
       }
-      
+
       // Show info if email was partially delivered
       if (data?.blockedRecipients?.length > 0 && data?.deliveredTo > 0) {
         toast.info(`Email delivered to ${data.deliveredTo} of ${data.totalRecipients} recipient(s)`);
@@ -708,6 +710,38 @@ const EmailEditor = ({ isDark }) => {
     }
   }, [location.search, editor]);
 
+  // Handle draft loading
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const draftId = searchParams.get("draft");
+
+    if (draftId) {
+      const fetchDraft = async () => {
+        try {
+          const draft = await getEmailById(draftId);
+          if (draft) {
+            if (draft.to && draft.to.length > 0) {
+              setRecipients(draft.to.map(r => r.user.platformMail || r.user.email));
+            }
+            if (draft.subject) setSubject(draft.subject);
+            if (draft.body) {
+              setEmailContent(draft.body);
+              editor?.commands.setContent(draft.body);
+            }
+            // Attachments are not currently restored from drafts due to encryption complexity
+            // if (draft.attachments && draft.attachments.length > 0) {
+            //   setAttachedFiles(draft.attachments); 
+            // }
+          }
+        } catch (error) {
+          console.error("Failed to load draft:", error);
+          toast.error("Failed to load draft");
+        }
+      };
+      fetchDraft();
+    }
+  }, [location.search, editor]);
+
   // when component unmounts, destroy editor
   useEffect(() => {
     return () => {
@@ -718,15 +752,13 @@ const EmailEditor = ({ isDark }) => {
   // ---------- UI (Google/Gmail style) ----------
   return (
     <div
-      className={`min-h-screen max-h-screen flex flex-col ${
-        isDark ? "bg-[#202124]" : "bg-[#f8f9fa]"
-      }`}
+      className={`min-h-screen max-h-screen flex flex-col ${isDark ? "bg-[#202124]" : "bg-[#f8f9fa]"
+        }`}
     >
       {/* Mobile Header */}
       <div
-        className={`lg:hidden ${
-          isDark ? "bg-[#202124] border-[#3c4043]" : "bg-white border-gray-200"
-        } shadow-sm border-b p-4 sticky top-0 z-10 flex-shrink-0`}
+        className={`lg:hidden ${isDark ? "bg-[#202124] border-[#3c4043]" : "bg-white border-gray-200"
+          } shadow-sm border-b p-4 sticky top-0 z-10 flex-shrink-0`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -739,9 +771,8 @@ const EmailEditor = ({ isDark }) => {
                   setIsMobileMenuOpen(!isMobileMenuOpen);
                 }
               }}
-              className={`p-2 rounded-lg transition-colors active:scale-95 ${
-                isDark ? "hover:bg-[#303134]" : "hover:bg-gray-100"
-              }`}
+              className={`p-2 rounded-lg transition-colors active:scale-95 ${isDark ? "hover:bg-[#303134]" : "hover:bg-gray-100"
+                }`}
               aria-label="Back"
             >
               <ArrowLeft
@@ -750,9 +781,8 @@ const EmailEditor = ({ isDark }) => {
               />
             </button>
             <h1
-              className={`text-lg font-medium ${
-                isDark ? "text-[#e8eaed]" : "text-gray-900"
-              }`}
+              className={`text-lg font-medium ${isDark ? "text-[#e8eaed]" : "text-gray-900"
+                }`}
             >
               Compose
             </h1>
@@ -760,9 +790,8 @@ const EmailEditor = ({ isDark }) => {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setShowAssistant(!showAssistant)}
-              className={`p-2 rounded-lg transition-colors ${
-                isDark ? "hover:bg-[#303134]" : "hover:bg-gray-100"
-              }`}
+              className={`p-2 rounded-lg transition-colors ${isDark ? "hover:bg-[#303134]" : "hover:bg-gray-100"
+                }`}
             >
               <Bot
                 size={20}
@@ -772,19 +801,18 @@ const EmailEditor = ({ isDark }) => {
                       ? "text-[#8ab4f8]"
                       : "text-blue-600"
                     : isDark
-                    ? "text-[#9aa0a6]"
-                    : "text-gray-400"
+                      ? "text-[#9aa0a6]"
+                      : "text-gray-400"
                 }
               />
             </button>
             <button
               onClick={handleSendEmail}
               disabled={isScanning || isSending}
-              className={`${
-                isDark
-                  ? "bg-[#8ab4f8] hover:bg-[#7ba3f7] text-[#202124]"
-                  : "bg-[#1a73e8] hover:bg-[#1765cc] text-white"
-              } px-4 py-2 rounded-lg flex items-center space-x-2 transition-all disabled:opacity-50 font-medium`}
+              className={`${isDark
+                ? "bg-[#8ab4f8] hover:bg-[#7ba3f7] text-[#202124]"
+                : "bg-[#1a73e8] hover:bg-[#1765cc] text-white"
+                } px-4 py-2 rounded-lg flex items-center space-x-2 transition-all disabled:opacity-50 font-medium`}
             >
               {isScanning ? (
                 <>
@@ -811,43 +839,38 @@ const EmailEditor = ({ isDark }) => {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Editor area */}
         <div
-          className={`flex-1 lg:overflow-y-auto ${
-            isDark ? "bg-[#202124]" : "bg-[#f8f9fa] lg:bg-white"
-          }`}
+          className={`flex-1 lg:overflow-y-auto ${isDark ? "bg-[#202124]" : "bg-[#f8f9fa] lg:bg-white"
+            }`}
         >
           <div
-            className={`hidden lg:flex items-center justify-between px-6 py-3 ${
-              isDark
-                ? "bg-[#202124] border-b border-[#3c4043]"
-                : "bg-white border-b border-gray-200"
-            } flex-shrink-0`}
+            className={`hidden lg:flex items-center justify-between px-6 py-3 ${isDark
+              ? "bg-[#202124] border-b border-[#3c4043]"
+              : "bg-white border-b border-gray-200"
+              } flex-shrink-0`}
           >
             <h1
-              className={`text-lg font-normal ${
-                isDark ? "text-[#e8eaed]" : "text-gray-900"
-              }`}
+              className={`text-lg font-normal ${isDark ? "text-[#e8eaed]" : "text-gray-900"
+                }`}
             >
               Compose
             </h1>
             <div className="flex items-center space-x-3">
               <button
                 onClick={handleSaveDraft}
-                className={`px-4 py-2 rounded transition-colors ${
-                  isDark
-                    ? "hover:bg-[#303134] text-[#e8eaed]"
-                    : "hover:bg-gray-100 text-gray-700"
-                }`}
+                className={`px-4 py-2 rounded transition-colors ${isDark
+                  ? "hover:bg-[#303134] text-[#e8eaed]"
+                  : "hover:bg-gray-100 text-gray-700"
+                  }`}
               >
                 Save draft
               </button>
               <button
                 onClick={handleSendEmail}
                 disabled={isScanning || isSending}
-                className={`${
-                  isDark
-                    ? "bg-[#8ab4f8] hover:bg-[#7ba3f7] text-[#202124]"
-                    : "bg-[#1a73e8] hover:bg-[#1765cc] text-white"
-                } px-6 py-2 rounded-lg flex items-center space-x-2 transition-all disabled:opacity-50 font-medium`}
+                className={`${isDark
+                  ? "bg-[#8ab4f8] hover:bg-[#7ba3f7] text-[#202124]"
+                  : "bg-[#1a73e8] hover:bg-[#1765cc] text-white"
+                  } px-6 py-2 rounded-lg flex items-center space-x-2 transition-all disabled:opacity-50 font-medium`}
               >
                 {isScanning ? (
                   <>
@@ -871,44 +894,38 @@ const EmailEditor = ({ isDark }) => {
 
           <div className="p-4 lg:p-0">
             <div
-              className={`${
-                isDark ? "bg-[#202124]" : "bg-white"
-              } lg:shadow-sm border-t lg:border-t-0 ${
-                isDark ? "border-[#3c4043]" : "border-gray-200"
-              } overflow-hidden`}
+              className={`${isDark ? "bg-[#202124]" : "bg-white"
+                } lg:shadow-sm border-t lg:border-t-0 ${isDark ? "border-[#3c4043]" : "border-gray-200"
+                } overflow-hidden`}
             >
               <div className="px-4 py-2 lg:px-6 lg:py-4 space-y-4">
                 {/* Recipients */}
                 <div>
                   <div
-                    className={`border-b ${
-                      isDark ? "border-[#3c4043]" : "border-gray-200"
-                    } pb-2 min-h-[40px] flex flex-wrap items-center gap-2`}
+                    className={`border-b ${isDark ? "border-[#3c4043]" : "border-gray-200"
+                      } pb-2 min-h-[40px] flex flex-wrap items-center gap-2`}
                   >
                     <span
-                      className={`text-sm font-medium ${
-                        isDark ? "text-[#9aa0a6]" : "text-gray-500"
-                      } mr-2`}
+                      className={`text-sm font-medium ${isDark ? "text-[#9aa0a6]" : "text-gray-500"
+                        } mr-2`}
                     >
                       To
                     </span>
                     {recipients.map((recipient, index) => (
                       <div
                         key={index}
-                        className={`${
-                          isDark
-                            ? "bg-[#303134] text-[#e8eaed] border-[#5f6368]"
-                            : "bg-[#e8f0fe] text-[#1a73e8] border-blue-200"
-                        } px-2 py-1 rounded flex items-center space-x-2 text-sm font-medium border`}
+                        className={`${isDark
+                          ? "bg-[#303134] text-[#e8eaed] border-[#5f6368]"
+                          : "bg-[#e8f0fe] text-[#1a73e8] border-blue-200"
+                          } px-2 py-1 rounded flex items-center space-x-2 text-sm font-medium border`}
                       >
                         <span>{recipient}</span>
                         <button
                           onClick={() => removeRecipient(index)}
-                          className={`${
-                            isDark
-                              ? "text-[#9aa0a6] hover:text-[#e8eaed]"
-                              : "text-blue-600 hover:text-blue-700"
-                          } p-0.5 rounded transition-colors`}
+                          className={`${isDark
+                            ? "text-[#9aa0a6] hover:text-[#e8eaed]"
+                            : "text-blue-600 hover:text-blue-700"
+                            } p-0.5 rounded transition-colors`}
                         >
                           <X size={14} />
                         </button>
@@ -921,11 +938,10 @@ const EmailEditor = ({ isDark }) => {
                       onKeyDown={handleRecipientKeyPress}
                       onBlur={addRecipient}
                       placeholder={recipients.length === 0 ? "Recipients" : ""}
-                      className={`flex-1 min-w-[150px] outline-none ${
-                        isDark
-                          ? "bg-transparent text-[#e8eaed] placeholder-[#9aa0a6]"
-                          : "text-gray-900 placeholder-gray-400"
-                      }`}
+                      className={`flex-1 min-w-[150px] outline-none ${isDark
+                        ? "bg-transparent text-[#e8eaed] placeholder-[#9aa0a6]"
+                        : "text-gray-900 placeholder-gray-400"
+                        }`}
                     />
                   </div>
                 </div>
@@ -933,20 +949,18 @@ const EmailEditor = ({ isDark }) => {
                 {/* Subject */}
                 <div>
                   <div
-                    className={`border-b ${
-                      isDark ? "border-[#3c4043]" : "border-gray-200"
-                    } pb-2`}
+                    className={`border-b ${isDark ? "border-[#3c4043]" : "border-gray-200"
+                      } pb-2`}
                   >
                     <input
                       type="text"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       placeholder="Subject"
-                      className={`w-full outline-none ${
-                        isDark
-                          ? "bg-transparent text-[#e8eaed] placeholder-[#9aa0a6]"
-                          : "text-gray-900 placeholder-gray-400"
-                      }`}
+                      className={`w-full outline-none ${isDark
+                        ? "bg-transparent text-[#e8eaed] placeholder-[#9aa0a6]"
+                        : "text-gray-900 placeholder-gray-400"
+                        }`}
                     />
                   </div>
                 </div>
@@ -954,11 +968,10 @@ const EmailEditor = ({ isDark }) => {
                 {/* Formatting toolbar */}
                 <div>
                   <div
-                    className={`flex items-center space-x-0.5 px-2 py-1 border-b ${
-                      isDark
-                        ? "border-[#3c4043] bg-[#202124]"
-                        : "border-gray-200 bg-gray-50"
-                    } overflow-x-auto`}
+                    className={`flex items-center space-x-0.5 px-2 py-1 border-b ${isDark
+                      ? "border-[#3c4043] bg-[#202124]"
+                      : "border-gray-200 bg-gray-50"
+                      } overflow-x-auto`}
                   >
                     {formatButtons.map((button, index) => {
                       const active = isActive(button.action);
@@ -967,15 +980,14 @@ const EmailEditor = ({ isDark }) => {
                           key={index}
                           title={button.title}
                           onClick={() => handleFormatClick(button.action)}
-                          className={`p-1.5 rounded transition-colors ${
-                            active
-                              ? isDark
-                                ? "bg-[#303134] text-[#e8eaed]"
-                                : "bg-gray-200 text-gray-900"
-                              : isDark
+                          className={`p-1.5 rounded transition-colors ${active
+                            ? isDark
+                              ? "bg-[#303134] text-[#e8eaed]"
+                              : "bg-gray-200 text-gray-900"
+                            : isDark
                               ? "hover:bg-[#303134] text-[#9aa0a6]"
                               : "hover:bg-gray-100 text-gray-600"
-                          }`}
+                            }`}
                         >
                           <button.icon size={16} />
                         </button>
@@ -985,18 +997,16 @@ const EmailEditor = ({ isDark }) => {
 
                   {/* Editor area with drag/drop */}
                   <div
-                    className={`relative tiptap-editor ${
-                      isDark ? "dark" : "light"
-                    }`}
+                    className={`relative tiptap-editor ${isDark ? "dark" : "light"
+                      }`}
                   >
                     <div
                       onDrop={handleDrop}
                       onDragOver={handleDragOver}
                       onDragEnter={handleDragEnter}
                       onDragLeave={handleDragLeave}
-                      className={`w-full min-h-[400px] ${
-                        isDark ? "bg-[#202124]" : "bg-white"
-                      }`}
+                      className={`w-full min-h-[400px] ${isDark ? "bg-[#202124]" : "bg-white"
+                        }`}
                       style={{
                         borderStyle: isEditorDragging ? "dashed" : undefined,
                         backgroundColor: isEditorDragging
@@ -1008,18 +1018,16 @@ const EmailEditor = ({ isDark }) => {
                     >
                       <EditorContent
                         editor={editor}
-                        className={`prose prose-sm max-w-none px-4 py-4 focus:outline-none ${
-                          isDark
-                            ? "text-[#e8eaed] prose-invert"
-                            : "text-gray-900"
-                        }`}
+                        className={`prose prose-sm max-w-none px-4 py-4 focus:outline-none ${isDark
+                          ? "text-[#e8eaed] prose-invert"
+                          : "text-gray-900"
+                          }`}
                       />
                     </div>
                     {isEditorDragging && (
                       <div
-                        className={`absolute inset-0 flex items-center justify-center pointer-events-none ${
-                          isDark ? "text-[#9aa0a6]" : "text-gray-500"
-                        }`}
+                        className={`absolute inset-0 flex items-center justify-center pointer-events-none ${isDark ? "text-[#9aa0a6]" : "text-gray-500"
+                          }`}
                       >
                         Drop files to attach
                       </div>
@@ -1083,14 +1091,12 @@ const EmailEditor = ({ isDark }) => {
                 {/* Attachments */}
                 {attachedFiles.length > 0 && (
                   <div
-                    className={`pt-4 border-t ${
-                      isDark ? "border-[#3c4043]" : "border-gray-200"
-                    }`}
+                    className={`pt-4 border-t ${isDark ? "border-[#3c4043]" : "border-gray-200"
+                      }`}
                   >
                     <h3
-                      className={`text-sm font-medium mb-2 ${
-                        isDark ? "text-[#9aa0a6]" : "text-gray-600"
-                      }`}
+                      className={`text-sm font-medium mb-2 ${isDark ? "text-[#9aa0a6]" : "text-gray-600"
+                        }`}
                     >
                       Attachments ({attachedFiles.length})
                     </h3>
@@ -1098,11 +1104,10 @@ const EmailEditor = ({ isDark }) => {
                       {attachedFiles.map((file) => (
                         <div
                           key={file.id}
-                          className={`flex items-center justify-between ${
-                            isDark
-                              ? "bg-[#303134] border-[#5f6368]"
-                              : "bg-gray-50 border-gray-200"
-                          } border p-2 rounded`}
+                          className={`flex items-center justify-between ${isDark
+                            ? "bg-[#303134] border-[#5f6368]"
+                            : "bg-gray-50 border-gray-200"
+                            } border p-2 rounded`}
                         >
                           <div className="flex items-center space-x-3 truncate">
                             <FileText
@@ -1115,16 +1120,14 @@ const EmailEditor = ({ isDark }) => {
                             />
                             <div className="min-w-0">
                               <span
-                                className={`text-sm truncate block ${
-                                  isDark ? "text-[#e8eaed]" : "text-gray-900"
-                                }`}
+                                className={`text-sm truncate block ${isDark ? "text-[#e8eaed]" : "text-gray-900"
+                                  }`}
                               >
                                 {file.name}
                               </span>
                               <span
-                                className={`text-xs ${
-                                  isDark ? "text-[#9aa0a6]" : "text-gray-500"
-                                }`}
+                                className={`text-xs ${isDark ? "text-[#9aa0a6]" : "text-gray-500"
+                                  }`}
                               >
                                 {formatFileSize(file.size)}
                               </span>
@@ -1132,11 +1135,10 @@ const EmailEditor = ({ isDark }) => {
                           </div>
                           <button
                             onClick={() => removeFile(file.id)}
-                            className={`p-1 ml-2 rounded transition-colors flex-shrink-0 ${
-                              isDark
-                                ? "text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#202124]"
-                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-200"
-                            }`}
+                            className={`p-1 ml-2 rounded transition-colors flex-shrink-0 ${isDark
+                              ? "text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#202124]"
+                              : "text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+                              }`}
                           >
                             <X size={14} />
                           </button>
@@ -1162,7 +1164,7 @@ const EmailEditor = ({ isDark }) => {
         {showAssistant && (
           <>
             {/* Mobile Overlay */}
-            <div 
+            <div
               className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-50"
               onClick={() => setShowAssistant(false)}
             />
@@ -1185,125 +1187,122 @@ const EmailEditor = ({ isDark }) => {
                 </button>
               </div>
 
-            <div className={`p-4 border-b ${isDark ? 'border-[#2E2E2E]' : 'border-gray-100'} flex-shrink-0`}>
-              <h3 className={`text-sm font-bold mb-3 ${isDark ? 'text-[#f3f4f6]' : 'text-gray-700'}`}>
-                Quick Actions
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                {["improve", "formal", "casual", "template"].map((action) => (
-                  <button
-                    key={action}
-                    onClick={() => handleQuickAction(action)}
-                    className={`flex items-center space-x-2 px-3 py-2 ${isDark ? 'bg-[#232326] hover:bg-[#2E2E2E] border-[#2E2E2E] text-[#f3f4f6]' : 'bg-gray-50 hover:bg-blue-100/50 border-gray-200 text-gray-700'} border rounded-xl transition-colors text-left text-sm font-medium shadow-sm active:scale-95`}
-                  >
-                    {action === "improve" && (
-                      <Edit3 size={16} className="text-blue-500" />
-                    )}
-                    {action === "formal" && (
-                      <Type size={16} className="text-blue-500" />
-                    )}
-                    {action === "casual" && (
-                      <MessageSquare size={16} className="text-blue-500" />
-                    )}
-                    {action === "template" && (
-                      <Layout size={16} className="text-blue-500" />
-                    )}
-                    <span className="capitalize">{action}</span>
-                  </button>
-                ))}
+              <div className={`p-4 border-b ${isDark ? 'border-[#2E2E2E]' : 'border-gray-100'} flex-shrink-0`}>
+                <h3 className={`text-sm font-bold mb-3 ${isDark ? 'text-[#f3f4f6]' : 'text-gray-700'}`}>
+                  Quick Actions
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {["improve", "formal", "casual", "template"].map((action) => (
+                    <button
+                      key={action}
+                      onClick={() => handleQuickAction(action)}
+                      className={`flex items-center space-x-2 px-3 py-2 ${isDark ? 'bg-[#232326] hover:bg-[#2E2E2E] border-[#2E2E2E] text-[#f3f4f6]' : 'bg-gray-50 hover:bg-blue-100/50 border-gray-200 text-gray-700'} border rounded-xl transition-colors text-left text-sm font-medium shadow-sm active:scale-95`}
+                    >
+                      {action === "improve" && (
+                        <Edit3 size={16} className="text-blue-500" />
+                      )}
+                      {action === "formal" && (
+                        <Type size={16} className="text-blue-500" />
+                      )}
+                      {action === "casual" && (
+                        <MessageSquare size={16} className="text-blue-500" />
+                      )}
+                      {action === "template" && (
+                        <Layout size={16} className="text-blue-500" />
+                      )}
+                      <span className="capitalize">{action}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className={`p-4 flex-1 overflow-y-auto space-y-4 ${isDark ? 'bg-[#18181b]' : ''}`}>
-              {assistantMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`max-w-[85%] ${
-                    message.isAssistant
-                      ? isDark 
+              <div className={`p-4 flex-1 overflow-y-auto space-y-4 ${isDark ? 'bg-[#18181b]' : ''}`}>
+                {assistantMessages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`max-w-[85%] ${message.isAssistant
+                      ? isDark
                         ? "bg-[#232326] rounded-bl-xl rounded-tr-xl rounded-br-xl self-start"
                         : "bg-gray-100 rounded-bl-xl rounded-tr-xl rounded-br-xl self-start"
                       : "bg-blue-500 text-white rounded-tl-xl rounded-tr-xl rounded-bl-xl ml-auto"
-                  } rounded-xl p-3 shadow-sm`}
-                  style={{ wordBreak: "break-word" }}
-                >
-                  <p
-                    className={`text-sm ${
-                      message.isAssistant 
+                      } rounded-xl p-3 shadow-sm`}
+                    style={{ wordBreak: "break-word" }}
+                  >
+                    <p
+                      className={`text-sm ${message.isAssistant
                         ? isDark ? "text-[#f3f4f6]" : "text-gray-800"
                         : "text-white"
-                    } whitespace-pre-wrap`}
-                  >
-                    {message.text}
-                  </p>
-                  <span
-                    className={`text-xs mt-1 block ${
-                      message.isAssistant 
+                        } whitespace-pre-wrap`}
+                    >
+                      {message.text}
+                    </p>
+                    <span
+                      className={`text-xs mt-1 block ${message.isAssistant
                         ? isDark ? "text-[#9aa0a6]" : "text-gray-500"
                         : "text-blue-200"
-                    } text-right`}
-                  >
-                    {message.time}
-                  </span>
-                </div>
-              ))}
+                        } text-right`}
+                    >
+                      {message.time}
+                    </span>
+                  </div>
+                ))}
 
-              {isAssistantTyping && (
-                <div className={`max-w-[85%] ${isDark ? 'bg-[#232326]' : 'bg-gray-100'} rounded-bl-xl rounded-tr-xl rounded-br-xl p-3 shadow-sm flex items-center space-x-2`}>
-                  <Bot size={16} className="text-blue-500 animate-pulse" />
-                  <span className={`text-sm ${isDark ? 'text-[#9aa0a6]' : 'text-gray-600'}`}>
-                    Assistant is typing...
-                  </span>
-                </div>
-              )}
-            </div>
+                {isAssistantTyping && (
+                  <div className={`max-w-[85%] ${isDark ? 'bg-[#232326]' : 'bg-gray-100'} rounded-bl-xl rounded-tr-xl rounded-br-xl p-3 shadow-sm flex items-center space-x-2`}>
+                    <Bot size={16} className="text-blue-500 animate-pulse" />
+                    <span className={`text-sm ${isDark ? 'text-[#9aa0a6]' : 'text-gray-600'}`}>
+                      Assistant is typing...
+                    </span>
+                  </div>
+                )}
+              </div>
 
-            <div className={`p-4 border-t ${isDark ? 'border-[#2E2E2E] bg-[#18181b]' : 'border-gray-200 bg-white'} flex-shrink-0`}>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={assistantInput}
-                  onChange={(e) => setAssistantInput(e.target.value)}
-                  onKeyPress={(e) =>
-                    e.key === "Enter" && sendAssistantMessage()
-                  }
-                  placeholder="Ask for help with your email..."
-                  className={`flex-1 px-4 py-3 border-2 ${isDark ? 'border-[#2E2E2E] bg-[#232326] text-[#f3f4f6] placeholder-[#9aa0a6] focus:border-blue-500 focus:ring-blue-500/20' : 'border-gray-200 text-gray-700 focus:ring-blue-50 focus:border-blue-500'} rounded-xl focus:outline-none focus:ring-4 text-sm transition-all`}
-                  disabled={isAssistantTyping}
-                />
-                <button
-                  onClick={sendAssistantMessage}
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-3 rounded-xl transition-all shadow-md flex items-center justify-center disabled:opacity-50 active:scale-95"
-                  disabled={isAssistantTyping || !assistantInput.trim()}
-                >
-                  <Send size={18} />
-                </button>
-                <button
-                  onClick={() => {
-                    const last = [...assistantMessages]
-                      .reverse()
-                      .find((m) => m.isAssistant);
-                    if (!last) {
-                      toast.error("No assistant reply to insert");
-                      return;
+              <div className={`p-4 border-t ${isDark ? 'border-[#2E2E2E] bg-[#18181b]' : 'border-gray-200 bg-white'} flex-shrink-0`}>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={assistantInput}
+                    onChange={(e) => setAssistantInput(e.target.value)}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" && sendAssistantMessage()
                     }
-                    const subjectMatch =
-                      last.text.match(/\bSubject\s*:\s*(.+)/i);
-                    const contentMatch = last.text.match(
-                      /\bContent\s*:\s*([\s\S]*)/i
-                    );
-                    if (subjectMatch && subjectMatch[1])
-                      setSubject(subjectMatch[1].trim());
-                    const raw = contentMatch
-                      ? contentMatch[1].trim()
-                      : last.text;
-                    const html = raw
-                      .split(/\n\n+/)
-                      .map((block) => block.trim())
-                      .filter(Boolean)
-                      .map((b) =>
-                        /^(\-|\*|\d+\.)\s/.test(b)
-                          ? `<ul>${b
+                    placeholder="Ask for help with your email..."
+                    className={`flex-1 px-4 py-3 border-2 ${isDark ? 'border-[#2E2E2E] bg-[#232326] text-[#f3f4f6] placeholder-[#9aa0a6] focus:border-blue-500 focus:ring-blue-500/20' : 'border-gray-200 text-gray-700 focus:ring-blue-50 focus:border-blue-500'} rounded-xl focus:outline-none focus:ring-4 text-sm transition-all`}
+                    disabled={isAssistantTyping}
+                  />
+                  <button
+                    onClick={sendAssistantMessage}
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-3 rounded-xl transition-all shadow-md flex items-center justify-center disabled:opacity-50 active:scale-95"
+                    disabled={isAssistantTyping || !assistantInput.trim()}
+                  >
+                    <Send size={18} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const last = [...assistantMessages]
+                        .reverse()
+                        .find((m) => m.isAssistant);
+                      if (!last) {
+                        toast.error("No assistant reply to insert");
+                        return;
+                      }
+                      const subjectMatch =
+                        last.text.match(/\bSubject\s*:\s*(.+)/i);
+                      const contentMatch = last.text.match(
+                        /\bContent\s*:\s*([\s\S]*)/i
+                      );
+                      if (subjectMatch && subjectMatch[1])
+                        setSubject(subjectMatch[1].trim());
+                      const raw = contentMatch
+                        ? contentMatch[1].trim()
+                        : last.text;
+                      const html = raw
+                        .split(/\n\n+/)
+                        .map((block) => block.trim())
+                        .filter(Boolean)
+                        .map((b) =>
+                          /^(\-|\*|\d+\.)\s/.test(b)
+                            ? `<ul>${b
                               .split(/\n/)
                               .map((l) =>
                                 l.replace(/^\s*(\-|\*|\d+\.)\s+/, "").trim()
@@ -1311,20 +1310,20 @@ const EmailEditor = ({ isDark }) => {
                               .filter(Boolean)
                               .map((i) => `<li>${i}</li>`)
                               .join("")}</ul>`
-                          : `<p>${b.replace(/\n/g, "<br/>")}</p>`
-                      )
-                      .join("");
-                    editor?.chain().focus().setContent(html).run();
-                    toast.success("Inserted into editor");
-                  }}
-                  className="px-4 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-all shadow-sm"
-                  title="Insert last assistant reply into subject and body"
-                >
-                  Insert
-                </button>
+                            : `<p>${b.replace(/\n/g, "<br/>")}</p>`
+                        )
+                        .join("");
+                      editor?.chain().focus().setContent(html).run();
+                      toast.success("Inserted into editor");
+                    }}
+                    className="px-4 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-all shadow-sm"
+                    title="Insert last assistant reply into subject and body"
+                  >
+                    Insert
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
           </>
         )}
 
