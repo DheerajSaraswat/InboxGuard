@@ -16,10 +16,10 @@ function Footer({ isDark }) {
         <div className={`text-center md:text-right ${isDark ? 'text-[#BBBBBB]' : 'text-[#444]'}`}>
           <p>Built by BPIT CSE Students</p>
           <p className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-[#888]'}`}>
-            Dheeraj Saraswat - Diya Singhal - Darshan Begani - Md. Jauhar Ghyas
+            
             Ansari <br />
             <span className="mt-1 block">
-              Under guidance of Dr. Deepti Jain
+            
             </span>
           </p>
         </div>
