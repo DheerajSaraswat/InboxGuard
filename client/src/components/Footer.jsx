@@ -17,7 +17,7 @@ function Footer({ isDark }) {
           <p>Built by BPIT CSE Students</p>
           <p className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-[#888]'}`}>
             
-            Ansari <br />
+             <br />
             <span className="mt-1 block">
             
             </span>
